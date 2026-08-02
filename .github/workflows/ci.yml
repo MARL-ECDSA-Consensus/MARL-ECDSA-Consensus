@@ -88,14 +88,17 @@ jobs:
           printf '| %s | %s | tests passed |\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${{ github.event_name }}" >> "$FILE"
           git add "$FILE"
           git commit -m "chore: append review log - $(date -u +%Y-%m-%dT%H:%M:%SZ)" --allow-empty
-          # P1-15修复: 与心跳工作流可能并行 push，重试 pull+push 直至成功
+          # P1-17修复: 先同步远端，再 force-with-lease 推送（保留本步提交，杜绝并发非快进）
+          git fetch origin main
+          git rebase origin/main || git merge origin/main || true
           for attempt in 1 2 3 4 5; do
-            git pull --rebase origin main 2>/dev/null || git pull origin main 2>/dev/null || true
-            if git push origin main 2>/dev/null; then
+            if git push --force-with-lease origin main 2>&1 | tee /tmp/push.log; then
               echo "review log pushed on attempt $attempt"
               exit 0
             fi
-            echo "push attempt $attempt failed, retrying..."
+            echo "push attempt $attempt failed: $(tail -2 /tmp/push.log)"
+            git fetch origin main
+            git rebase origin/main || git merge origin/main || true
             sleep 8
           done
           echo "all push attempts failed" >&2
