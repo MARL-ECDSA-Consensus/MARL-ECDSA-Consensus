@@ -10,6 +10,14 @@ on:
     # 每日定时质检：即使无新提交也自动跑全量测试（24h 无人值守持续优化）
     - cron: '15 2 * * *'   # 每日 UTC 02:15（北京时间 10:15）
 
+permissions:
+  contents: write
+
+# 串行化 review 日志追加，避免并发 push 非快进
+concurrency:
+  group: ci-review-log
+  cancel-in-progress: false
+
 jobs:
   test:
     name: pytest (${{ matrix.python-version }})
@@ -56,3 +64,30 @@ jobs:
               assert eng is not None
           print('consensus factory OK')
           "
+
+  review-log:
+    name: Append review log (audit trail)
+    runs-on: ubuntu-latest
+    needs: test
+    # PR 不写日志（避免给他人 fork 仓库 push）；push/schedule/manual 均记录
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "TrueFurina"
+          git config user.email "2468001320@qq.com"
+
+      - name: Append review log entry
+        run: |
+          mkdir -p activity
+          FILE="activity/review-log.md"
+          [ -f "$FILE" ] || printf '# MARL-ECDSA Continuous Review Log\n\n| Time (UTC) | Event | Status |\n|---|---|---|\n' > "$FILE"
+          printf '| %s | %s | tests passed |\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${{ github.event_name }}" >> "$FILE"
+          git add "$FILE"
+          git commit -m "chore: append review log - $(date -u +%Y-%m-%dT%H:%M:%SZ)" --allow-empty
+          git pull --rebase origin main || git pull origin main || true
+          git push origin main
