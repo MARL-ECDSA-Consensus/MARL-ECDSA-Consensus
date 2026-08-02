@@ -89,5 +89,15 @@ jobs:
           printf '| %s | %s | tests passed |\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${{ github.event_name }}" >> "$FILE"
           git add "$FILE"
           git commit -m "chore: append review log - $(date -u +%Y-%m-%dT%H:%M:%SZ)" --allow-empty
-          git pull --rebase origin main || git pull origin main || true
-          git push origin main
+          # P1-15修复: 与心跳工作流可能并行 push，重试 pull+push 直至成功
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main 2>/dev/null || git pull origin main 2>/dev/null || true
+            if git push origin main 2>/dev/null; then
+              echo "review log pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt failed, retrying..."
+            sleep 8
+          done
+          echo "all push attempts failed" >&2
+          exit 1
