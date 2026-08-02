@@ -1,0 +1,55 @@
+name: CI - Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: pytest (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run test suite
+        run: |
+          python -m pytest tests/ -v --tb=short
+
+      - name: Verify dashboard imports (Flask route registration)
+        run: |
+          python -c "from visualization.dashboard import _create_app; app = _create_app(); assert app is not None; print('dashboard OK, routes:', len(app.url_map._rules))"
+
+      - name: Verify consensus factory (all modes)
+        run: |
+          python -c "
+          from blockchain.consensus.factory import create_consensus_engine
+          for mode in ['cw_pbft', 'standard_pbft', 'fast']:
+              eng = create_consensus_engine('node_0', ['node_0','node_1','node_2'], mode=mode)
+              assert eng is not None
+          print('consensus factory OK')
+          "
