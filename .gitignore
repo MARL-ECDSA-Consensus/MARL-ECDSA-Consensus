@@ -9,3 +9,7 @@ results/
 training_results*.json
 *.pyc
 .env
+
+# P0-2: 匿名评审合规——含身份信息的课设PPT/文档禁止入库
+课设*汇报*.pptx
+*课程设计*.pptx
