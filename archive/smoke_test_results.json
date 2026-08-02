@@ -1,0 +1,121 @@
+{
+  "config": {
+    "n_agents": 3,
+    "n_landmarks": 3,
+    "hidden_dim": 128,
+    "lr": 0.001,
+    "gamma": 0.8,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.05,
+    "epsilon_decay": 5000,
+    "batch_size": 64,
+    "n_episodes": 3,
+    "max_steps": 25,
+    "lambda_weight": 0.1,
+    "upload_interval": 10,
+    "selfish_ratio": 0.0,
+    "mode": "bc_marl",
+    "seed": 42,
+    "log_interval": 1,
+    "save_interval": 100
+  },
+  "summary": {
+    "total_episodes": 3,
+    "avg_reward": -68.21657940820882,
+    "avg_reward_last_50": -68.21657940820882,
+    "avg_cooperation_rate": 0.4000000000000001,
+    "avg_betrayal_rate": 0.0,
+    "total_losses": 1,
+    "elapsed_time": 0.785315990447998
+  },
+  "episode_rewards": [
+    -91.9130985040099,
+    -60.98916584452308,
+    -51.74747387609347
+  ],
+  "cooperation_rates": [
+    0.8133333333333334,
+    0.26666666666666666,
+    0.12
+  ],
+  "betrayal_rates": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "bc_scores_history": [
+    {
+      "agent_0": 15.0,
+      "agent_1": 10.0,
+      "agent_2": 10.0
+    },
+    {
+      "agent_0": 25.0,
+      "agent_1": 20.0,
+      "agent_2": 25.0
+    },
+    {
+      "agent_0": 35.0,
+      "agent_1": 30.0,
+      "agent_2": 40.0
+    }
+  ],
+  "losses": [
+    0.3453963851534354
+  ],
+  "bc_scores_final": {
+    "agent_0": 35.0,
+    "agent_1": 30.0,
+    "agent_2": 40.0
+  },
+  "leaderboard": [
+    {
+      "agent_id": "agent_2",
+      "score": 40.0
+    },
+    {
+      "agent_id": "agent_0",
+      "score": 35.0
+    },
+    {
+      "agent_id": "agent_1",
+      "score": 30.0
+    }
+  ],
+  "ecdsa_stats": {
+    "sign_count": 225,
+    "verify_count": 225
+  },
+  "security_stats": {
+    "ecdsa_sign_count": 225,
+    "ecdsa_verify_count": 225,
+    "security_pass_count": 225,
+    "security_fail_count": 0,
+    "total_alerts": 0,
+    "danger_agents": [],
+    "recent_alerts": []
+  },
+  "consensus_stats": {
+    "node_id": "consensus_node_0",
+    "state": "committed",
+    "n_nodes": 3,
+    "f_tolerance": 0,
+    "prepare_votes": 3,
+    "commit_votes": 3,
+    "current_block_hash": "594b9518ae58cc8528bfbc37850ad1169aecc03835e26c2440e1ffa6a6cadbe0",
+    "weights": {
+      "agent_0": 1.2753673402997083,
+      "agent_1": 1.2753673402997083,
+      "agent_2": 1.3628673402997085
+    },
+    "block_count": 3,
+    "consensus_count": 3
+  },
+  "blockchain_stats": {
+    "height": 3,
+    "total_blocks": 4,
+    "total_transactions": 225,
+    "latest_hash": "594b9518ae58cc85...",
+    "pending_transactions": 0
+  }
+}

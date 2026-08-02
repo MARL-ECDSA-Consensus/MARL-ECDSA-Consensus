@@ -1,0 +1,11 @@
+# P0-1: 敏感文件与构建产物排除 — 防止密钥/签名材料误提交
+keys/
+keys_demo/
+*.pem
+__pycache__/
+.pytest_cache/
+data/
+results/
+training_results*.json
+*.pyc
+.env

@@ -1,0 +1,270 @@
+=== 消融实验 ===
+基础: bc_marl, λ=0.5, 1000回合
+消融条件: 3 种 × 5 种子 = 15 次训练
+
+  [ablate_security][seed=42] 开始... 2026-06-26 10:38:54,696 [INFO] train: [Trainer] 消融模式：SecurityGuard 已禁用
+2026-06-26 10:38:56,342 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 10:38:56,342 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 10:38:56,342 [INFO] train: ============================================================
+2026-06-26 10:38:56,342 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 10:38:56,342 [INFO] train: ============================================================
+2026-06-26 10:42:18,864 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-19.46 合作=51.9%  BC奖励=11.7
+2026-06-26 10:42:18,872 [INFO] train: ============================================================
+2026-06-26 10:42:18,873 [INFO] train: 训练完成 | 耗时=202.5s
+2026-06-26 10:42:18,873 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -34.257300662774085,
+  "avg_reward_last_50": -19.45740209231902,
+  "avg_cooperation_rate": 0.51904,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 202.53009796142578
+}
+2026-06-26 10:42:18,873 [INFO] train: ============================================================
+2026-06-26 10:42:18,892 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_security_seed42.json
+2026-06-26 10:42:19,622 [INFO] plot: [Plot] 中文字体已配置: Noto Sans SC
+2026-06-26 10:42:19,958 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 10:42:20,199 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 10:42:20,309 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 10:42:20,309 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-34.3  last50=-19.5  coop=52%  (206s)
+  [ablate_security][seed=123] 开始... 2026-06-26 10:42:20,310 [INFO] train: [Trainer] 消融模式：SecurityGuard 已禁用
+2026-06-26 10:42:20,315 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 10:42:20,316 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 10:42:20,340 [INFO] train: ============================================================
+2026-06-26 10:42:20,340 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 10:42:20,340 [INFO] train: ============================================================
+2026-06-26 10:45:50,564 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-23.71 合作=53.1%  BC奖励=11.7
+2026-06-26 10:45:50,564 [INFO] train: ============================================================
+2026-06-26 10:45:50,564 [INFO] train: 训练完成 | 耗时=210.2s
+2026-06-26 10:45:50,565 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -32.606647888855115,
+  "avg_reward_last_50": -23.711831997280846,
+  "avg_cooperation_rate": 0.5305599999999999,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 210.2244427204132
+}
+2026-06-26 10:45:50,565 [INFO] train: ============================================================
+2026-06-26 10:45:50,590 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_security_seed123.json
+2026-06-26 10:45:51,073 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 10:45:51,647 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 10:45:51,889 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 10:45:51,889 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-32.6  last50=-23.7  coop=53%  (212s)
+  [ablate_security][seed=456] 开始... 2026-06-26 10:45:51,891 [INFO] train: [Trainer] 消融模式：SecurityGuard 已禁用
+2026-06-26 10:45:51,903 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 10:45:51,903 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 10:45:51,963 [INFO] train: ============================================================
+2026-06-26 10:45:51,963 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 10:45:51,964 [INFO] train: ============================================================
+2026-06-26 10:49:29,970 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-12.87 合作=54.5%  BC奖励=11.7
+2026-06-26 10:49:29,970 [INFO] train: ============================================================
+2026-06-26 10:49:29,970 [INFO] train: 训练完成 | 耗时=218.0s
+2026-06-26 10:49:29,970 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -31.641581426677803,
+  "avg_reward_last_50": -12.874276918639328,
+  "avg_cooperation_rate": 0.5448133333333333,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 218.00663781166077
+}
+2026-06-26 10:49:29,970 [INFO] train: ============================================================
+2026-06-26 10:49:29,986 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_security_seed456.json
+2026-06-26 10:49:30,253 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 10:49:30,479 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 10:49:30,586 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 10:49:30,586 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-31.6  last50=-12.9  coop=54%  (219s)
+  [ablate_security][seed=789] 开始... 2026-06-26 10:49:30,587 [INFO] train: [Trainer] 消融模式：SecurityGuard 已禁用
+2026-06-26 10:49:30,591 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 10:49:30,591 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 10:49:30,617 [INFO] train: ============================================================
+2026-06-26 10:49:30,617 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 10:49:30,617 [INFO] train: ============================================================
+2026-06-26 10:53:27,942 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-20.54 合作=56.6%  BC奖励=11.7
+2026-06-26 10:53:27,943 [INFO] train: ============================================================
+2026-06-26 10:53:27,943 [INFO] train: 训练完成 | 耗时=237.3s
+2026-06-26 10:53:27,943 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -29.982278805199247,
+  "avg_reward_last_50": -20.54366351637917,
+  "avg_cooperation_rate": 0.56552,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 237.32569098472595
+}
+2026-06-26 10:53:27,944 [INFO] train: ============================================================
+2026-06-26 10:53:27,967 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_security_seed789.json
+2026-06-26 10:53:28,418 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 10:53:29,047 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 10:53:29,289 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 10:53:29,289 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-30.0  last50=-20.5  coop=57%  (239s)
+  [ablate_security][seed=1024] 开始... 2026-06-26 10:53:29,291 [INFO] train: [Trainer] 消融模式：SecurityGuard 已禁用
+2026-06-26 10:53:29,299 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 10:53:29,299 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 10:53:29,359 [INFO] train: ============================================================
+2026-06-26 10:53:29,359 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 10:53:29,359 [INFO] train: ============================================================
+2026-06-26 10:56:40,123 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-19.80 合作=52.9%  BC奖励=11.7
+2026-06-26 10:56:40,123 [INFO] train: ============================================================
+2026-06-26 10:56:40,123 [INFO] train: 训练完成 | 耗时=190.8s
+2026-06-26 10:56:40,123 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -31.84718713103986,
+  "avg_reward_last_50": -19.804133173400047,
+  "avg_cooperation_rate": 0.5293199999999999,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 190.76445150375366
+}
+2026-06-26 10:56:40,123 [INFO] train: ============================================================
+2026-06-26 10:56:40,148 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_security_seed1024.json
+2026-06-26 10:56:40,415 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 10:56:40,662 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 10:56:40,788 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 10:56:40,788 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-31.8  last50=-19.8  coop=53%  (191s)
+  [ablate_consensus][seed=42] 开始... 2026-06-26 10:56:40,794 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 10:56:40,794 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 10:56:40,829 [INFO] train: ============================================================
+2026-06-26 10:56:40,830 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 10:56:40,830 [INFO] train: ============================================================
+2026-06-26 10:59:39,752 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-27.38 合作=52.2%  BC奖励=11.7
+2026-06-26 10:59:39,753 [INFO] train: ============================================================
+2026-06-26 10:59:39,753 [INFO] train: 训练完成 | 耗时=178.9s
+2026-06-26 10:59:39,753 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -33.97351012535192,
+  "avg_reward_last_50": -27.377164587784936,
+  "avg_cooperation_rate": 0.52204,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 178.9232680797577
+}
+2026-06-26 10:59:39,753 [INFO] train: ============================================================
+2026-06-26 10:59:39,768 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_consensus_seed42.json
+2026-06-26 10:59:39,998 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 10:59:40,239 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 10:59:40,340 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 10:59:40,340 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-34.0  last50=-27.4  coop=52%  (180s)
+  [ablate_consensus][seed=123] 开始... 2026-06-26 10:59:40,344 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 10:59:40,344 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 10:59:40,372 [INFO] train: ============================================================
+2026-06-26 10:59:40,372 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 10:59:40,372 [INFO] train: ============================================================
+2026-06-26 11:03:53,501 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-14.68 合作=56.8%  BC奖励=11.7
+2026-06-26 11:03:53,501 [INFO] train: ============================================================
+2026-06-26 11:03:53,501 [INFO] train: 训练完成 | 耗时=253.1s
+2026-06-26 11:03:53,501 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -27.350533103499046,
+  "avg_reward_last_50": -14.682047310885991,
+  "avg_cooperation_rate": 0.5682666666666667,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 253.12867403030396
+}
+2026-06-26 11:03:53,502 [INFO] train: ============================================================
+2026-06-26 11:03:53,525 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_consensus_seed123.json
+2026-06-26 11:03:53,987 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 11:03:54,727 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+E:\Program\MARL\【CCF】区块链AI协同：面向MARL的共识机制\marl-ecdsa-consensus-chain\visualization\plot_results.py:168: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`). Consider using `matplotlib.pyplot.close()`.
+  fig, ax = plt.subplots(figsize=(8, max(4, len(agents)*0.5)))
+2026-06-26 11:03:54,981 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 11:03:54,982 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-27.4  last50=-14.7  coop=57%  (255s)
+  [ablate_consensus][seed=456] 开始... 2026-06-26 11:03:54,992 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 11:03:54,992 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 11:03:55,070 [INFO] train: ============================================================
+2026-06-26 11:03:55,070 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 11:03:55,071 [INFO] train: ============================================================
+2026-06-26 11:06:48,732 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-17.13 合作=52.4%  BC奖励=11.7
+2026-06-26 11:06:48,733 [INFO] train: ============================================================
+2026-06-26 11:06:48,733 [INFO] train: 训练完成 | 耗时=173.7s
+2026-06-26 11:06:48,733 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -33.4247126847709,
+  "avg_reward_last_50": -17.130709417491442,
+  "avg_cooperation_rate": 0.5237200000000001,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 173.66247963905334
+}
+2026-06-26 11:06:48,733 [INFO] train: ============================================================
+2026-06-26 11:06:48,749 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_consensus_seed456.json
+2026-06-26 11:06:49,002 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 11:06:49,237 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 11:06:49,346 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 11:06:49,346 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-33.4  last50=-17.1  coop=52%  (174s)
+  [ablate_consensus][seed=789] 开始... 2026-06-26 11:06:49,351 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 11:06:49,352 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 11:06:49,385 [INFO] train: ============================================================
+2026-06-26 11:06:49,385 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 11:06:49,385 [INFO] train: ============================================================
+2026-06-26 11:09:16,348 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-18.03 合作=54.9%  BC奖励=11.7
+2026-06-26 11:09:16,348 [INFO] train: ============================================================
+2026-06-26 11:09:16,348 [INFO] train: 训练完成 | 耗时=147.0s
+2026-06-26 11:09:16,348 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -31.388829515038747,
+  "avg_reward_last_50": -18.028805516539723,
+  "avg_cooperation_rate": 0.5494266666666666,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 146.96310186386108
+}
+2026-06-26 11:09:16,348 [INFO] train: ============================================================
+2026-06-26 11:09:16,364 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_consensus_seed789.json
+2026-06-26 11:09:16,621 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 11:09:16,855 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 11:09:16,958 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 11:09:16,958 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-31.4  last50=-18.0  coop=55%  (148s)
+  [ablate_consensus][seed=1024] 开始... 2026-06-26 11:09:16,964 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 11:09:16,964 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 11:09:16,994 [INFO] train: ============================================================
+2026-06-26 11:09:16,994 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 11:09:16,994 [INFO] train: ============================================================
+2026-06-26 11:11:46,767 [INFO] train: [E1000/1000] ε=0.050 AvgR(50)=-18.76 合作=53.8%  BC奖励=11.7
+2026-06-26 11:11:46,767 [INFO] train: ============================================================
+2026-06-26 11:11:46,767 [INFO] train: 训练完成 | 耗时=149.8s
+2026-06-26 11:11:46,767 [INFO] train: 最终统计: {
+  "total_episodes": 1000,
+  "avg_reward": -31.759545441179164,
+  "avg_reward_last_50": -18.756697465895186,
+  "avg_cooperation_rate": 0.5378133333333333,
+  "avg_betrayal_rate": 0.0,
+  "total_losses": 998,
+  "elapsed_time": 149.77310156822205
+}
+2026-06-26 11:11:46,767 [INFO] train: ============================================================
+2026-06-26 11:11:46,783 [INFO] train: [Trainer] 结果已导出: results/ablation/ablate_consensus_seed1024.json
+2026-06-26 11:11:47,014 [INFO] plot: 训练曲线已保存: results/ablation\plots/training_curve.png
+2026-06-26 11:11:47,265 [INFO] plot: 合作率曲线已保存: results/ablation\plots/cooperation_rate.png
+2026-06-26 11:11:47,367 [INFO] plot: 排行榜已保存: results/ablation\plots/leaderboard.png
+2026-06-26 11:11:47,367 [INFO] plot: 所有图表已保存到 results/ablation\plots/
+avg=-31.8  last50=-18.8  coop=54%  (150s)
+  [ablate_incentive][seed=42] 开始... 2026-06-26 11:11:47,369 [INFO] train: [Trainer] 消融模式：IncentiveContract 已禁用（无链上激励）
+2026-06-26 11:11:47,372 [INFO] train: [Trainer] 初始化完成，模式=bc_marl, 智能体=3
+2026-06-26 11:11:47,372 [INFO] train: [Trainer] 环境: obs_dim=14, actions=5
+2026-06-26 11:11:47,404 [INFO] train: ============================================================
+2026-06-26 11:11:47,404 [INFO] train: 训练开始 | 模式=bc_marl | 回合数=1000
+2026-06-26 11:11:47,404 [INFO] train: ============================================================
+Traceback (most recent call last):
+  File "E:\Program\MARL\【CCF】区块链AI协同：面向MARL的共识机制\marl-ecdsa-consensus-chain\run_ablation.py", line 64, in <module>
+    stats = trainer.train()
+  File "E:\Program\MARL\【CCF】区块链AI协同：面向MARL的共识机制\marl-ecdsa-consensus-chain\train.py", line 239, in train
+    ep_stats = self._run_episode(episode)
+  File "E:\Program\MARL\【CCF】区块链AI协同：面向MARL的共识机制\marl-ecdsa-consensus-chain\train.py", line 371, in _run_episode
+    self.bridge.on_episode_end(episode, self.agent_ids, ep_avg_rewards)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Program\MARL\【CCF】区块链AI协同：面向MARL的共识机制\marl-ecdsa-consensus-chain\marl\integration\bc_integration.py", line 421, in on_episode_end
+    cs = ContributionScore(
+         ^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'ContributionScore' where it is not associated with a value

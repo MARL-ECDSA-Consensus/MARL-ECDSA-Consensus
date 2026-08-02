@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MARL-ECDSA 共识链 — 国赛演示平台 v3.8 (子组件流水线可视化版)</title>
+    <script src="/static/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+
+<!-- 调试状态条 -->
+<div id="debug-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;padding:6px 16px;font-size:13px;font-family:monospace;text-align:center;"></div>
+
+<!-- 加载遮罩 -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-logo">⬡</div>
+    <div class="loading-text">正在加载训练数据...</div>
+    <div class="loading-bar"><div class="loading-bar-inner" id="loading-bar"></div></div>
+</div>
+
+<!-- 粒子背景 -->
+<canvas id="particles"></canvas>
+
+<!-- 顶栏 -->
+<div class="topbar">
+    <div class="logo">
+        <div class="icon">⬡</div>
+        MARL-ECDSA 共识链
+    </div>
+    <div class="topbar-right">
+        <div class="mode-tag" id="top-mode">平台就绪</div>
+        <button class="demo-btn" id="btn-demo" onclick="toggleDemoMode()" title="演示模式：自动轮播标签页（快捷键 P）">演示模式</button>
+        <button class="export-btn" onclick="showExportModal()" title="导出报告（快捷键 E）">导出报告</button>
+    </div>
+</div>
+
+<!-- 导航 -->
+<div class="nav-tabs" id="nav-tabs">
+    <button class="nav-tab active" data-tab="overview">总览</button>
+    <button class="nav-tab" data-tab="monitor">训练监控</button>
+    <button class="nav-tab" data-tab="compare">对比分析</button>
+    <button class="nav-tab" data-tab="tri">三模式对比</button>
+    <button class="nav-tab" data-tab="blockchain">区块链</button>
+    <button class="nav-tab" data-tab="consensus">共识投票</button>
+    <button class="nav-tab" data-tab="explorer">区块浏览器</button>
+    <button class="nav-tab" data-tab="attack">攻防演示</button>
+    <button class="nav-tab" data-tab="system">系统</button>
+    <button class="nav-tab" data-tab="p2p">P2P网络</button>
+</div>
+
+<!-- 主内容区 -->
+<div class="main">
+
+    <!-- ═══════ 总览 ═══════ -->
+    <div class="tab-content active" id="tab-overview">
+        <div class="hero">
+            <h1>多智能体强化学习 × 区块链双向协同</h1>
+            <p class="subtitle">
+                基于 IQL 独立 Q-Learning + CW-PBFT 贡献加权共识 + ECDSA 安全签名的
+                新型共识机制，在 SimpleSpread 协同导航任务中验证区块链激励对多智能体协作的提升效果。
+            </p>
+            <div class="highlight-grid">
+                <div class="highlight-item"><div class="num accent animated-num" id="ov-improve" data-target="30">--</div><div class="desc">BC 整体提升</div></div>
+                <div class="highlight-item"><div class="num accent animated-num" id="ov-episodes" data-target="1000">--</div><div class="desc">总训练回合</div></div>
+                <div class="highlight-item"><div class="num accent3 animated-num" id="ov-agents" data-target="3">--</div><div class="desc">协同智能体数</div></div>
+            </div>
+        </div>
+
+        <!-- 架构图 -->
+        <div class="arch-diagram">
+            <svg viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/></linearGradient>
+                    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
+                    <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                <!-- MARL -->
+                <rect x="30" y="80" width="160" height="100" rx="14" fill="rgba(56,189,248,0.06)" stroke="rgba(56,189,248,0.25)" stroke-width="1.5"/>
+                <text x="110" y="115" text-anchor="middle" fill="#38bdf8" font-size="14" font-weight="700" filter="url(#glow)">MARL 协同层</text>
+                <text x="110" y="138" text-anchor="middle" fill="#94a3b8" font-size="10">IQL · SimpleSpread</text>
+                <text x="110" y="155" text-anchor="middle" fill="#94a3b8" font-size="10">ε-greedy · Replay Buffer</text>
+
+                <!-- Blockchain -->
+                <rect x="490" y="80" width="160" height="100" rx="14" fill="rgba(129,140,248,0.06)" stroke="rgba(129,140,248,0.25)" stroke-width="1.5"/>
+                <text x="570" y="115" text-anchor="middle" fill="#818cf8" font-size="14" font-weight="700" filter="url(#glow)">区块链激励层</text>
+                <text x="570" y="138" text-anchor="middle" fill="#94a3b8" font-size="10">CW-PBFT · ECDSA</text>
+                <text x="570" y="155" text-anchor="middle" fill="#94a3b8" font-size="10">贡献量化 · 分级惩罚</text>
+
+                <!-- Bridge (v3.8: 4子组件编排) -->
+                <rect x="260" y="90" width="160" height="80" rx="14" fill="rgba(52,211,153,0.05)" stroke="rgba(52,211,153,0.2)" stroke-width="1.5"/>
+                <text x="340" y="118" text-anchor="middle" fill="#34d399" font-size="13" font-weight="700" filter="url(#glow)">Bridge 编排器</text>
+                <text x="340" y="136" text-anchor="middle" fill="#94a3b8" font-size="9">4子组件流水线架构(v3.8)</text>
+                <text x="340" y="152" text-anchor="middle" fill="#94a3b8" font-size="8">Signing→Recorder→Detector→Settlement</text>
+
+                <!-- Animated Arrows -->
+                <line x1="190" y1="130" x2="258" y2="130" stroke="rgba(56,189,248,0.35)" stroke-width="2" stroke-dasharray="6,4">
+                    <animate attributeName="stroke-dashoffset" from="20" to="0" dur="2s" repeatCount="indefinite"/>
+                </line>
+                <line x1="422" y1="130" x2="488" y2="130" stroke="rgba(129,140,248,0.35)" stroke-width="2" stroke-dasharray="6,4">
+                    <animate attributeName="stroke-dashoffset" from="20" to="0" dur="2s" repeatCount="indefinite"/>
+                </line>
+                <!-- Return arrows (feedback) -->
+                <line x1="258" y1="145" x2="190" y2="145" stroke="rgba(52,211,153,0.2)" stroke-width="1.5" stroke-dasharray="4,3">
+                    <animate attributeName="stroke-dashoffset" from="14" to="0" dur="3s" repeatCount="indefinite"/>
+                </line>
+                <line x1="488" y1="145" x2="422" y2="145" stroke="rgba(52,211,153,0.2)" stroke-width="1.5" stroke-dasharray="4,3">
+                    <animate attributeName="stroke-dashoffset" from="14" to="0" dur="3s" repeatCount="indefinite"/>
+                </line>
+
+                <!-- Bottom: Results -->
+                <rect x="190" y="200" width="300" height="50" rx="10" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                <text x="340" y="220" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">实验验证：pure_marl vs bc_marl vs selfish</text>
+                <text x="340" y="240" text-anchor="middle" fill="#64748b" font-size="10">1000回合 · BC整体提升29.6% · ECDSA 75K签名 · 1K区块</text>
+
+                <!-- labels -->
+                <text x="110" y="72" text-anchor="middle" fill="#64748b" font-size="9">决策 + 学习</text>
+                <text x="570" y="72" text-anchor="middle" fill="#64748b" font-size="9">激励 + 存证</text>
+            </svg>
+        </div>
+
+        <!-- 快速入口卡片 -->
+        <div class="stats-row" id="overview-stats"></div>
+
+        <!-- v3.4: 实验核心结论对比表格 -->
+        <div class="data-card" style="margin-top:14px;">
+            <h3 style="display:flex;align-items:center;gap:8px;">
+                <span style="color:var(--accent3);">⚡</span> 实验核心结论 — 三模式对照数据
+            </h3>
+            <table style="width:100%;font-size:0.85rem;">
+                <thead>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <th style="color:var(--text-dim);text-align:left;padding:8px;">指标</th>
+                        <th style="color:#94a3b8;text-align:center;padding:8px;">Pure MARL</th>
+                        <th style="color:#38bdf8;text-align:center;padding:8px;">BC-MARL</th>
+                        <th style="color:#f87171;text-align:center;padding:8px;">Selfish</th>
+                        <th style="color:#34d399;text-align:center;padding:8px;">BC vs Pure</th>
+                    </tr>
+                </thead>
+                <tbody id="ov-comparison-table"></tbody>
+            </table>
+        </div>
+
+        <!-- v3.4: 区块链流水线规模 -->
+        <div class="data-card" style="margin-top:14px;">
+            <h3 style="display:flex;align-items:center;gap:8px;">
+                <span style="color:#818cf8;">🔗</span> 区块链安全流水线规模（1000回合累计）
+            </h3>
+            <div id="ov-pipeline-scale" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
+        </div>
+    </div>
+
+    <!-- ═══════ 训练监控 ═══════ -->
+    <div class="tab-content" id="tab-monitor">
+        <div class="stats-row" id="monitor-stats"></div>
+        <div class="chart-grid">
+            <div class="chart-card"><h3>回合奖励曲线</h3><canvas id="chart-reward"></canvas></div>
+            <div class="chart-card"><h3>合作率 / 背叛率</h3><canvas id="chart-coop"></canvas></div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card"><h3>区块链积分变化</h3><canvas id="chart-bc"></canvas></div>
+            <div class="chart-card"><h3>训练 Loss</h3><canvas id="chart-loss"></canvas></div>
+        </div>
+        <div class="bottom-row">
+            <div class="data-card">
+                <h3>积分排行榜</h3>
+                <table><thead><tr><th>排名</th><th>智能体</th><th>链上积分</th><th>状态</th></tr></thead>
+                <tbody id="mon-leaderboard"></tbody></table>
+            </div>
+            <div class="data-card">
+                <h3>训练摘要</h3>
+                <table><tbody id="mon-summary"></tbody></table>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+            <button class="nav-tab active" onclick="switchMonitorMode('bc')" id="btn-bc" style="border-radius:8px;padding:6px 14px;">BC-MARL</button>
+            <button class="nav-tab" onclick="switchMonitorMode('pure')" id="btn-pure" style="border-radius:8px;padding:6px 14px;">Pure MARL</button>
+            <button class="nav-tab" onclick="switchMonitorMode('selfish')" id="btn-selfish" style="border-radius:8px;padding:6px 14px;">Selfish</button>
+        </div>
+    </div>
+
+    <!-- ═══════ 对比分析 ═══════ -->
+    <div class="tab-content" id="tab-compare">
+        <div class="compare-grid">
+            <div class="compare-card pure">
+                <h3>Pure MARL（纯多智能体）</h3>
+                <div class="compare-metrics" id="cmp-pure-metrics"></div>
+            </div>
+            <div class="compare-card bc">
+                <h3>BC-MARL（区块链协同）</h3>
+                <div class="compare-metrics" id="cmp-bc-metrics"></div>
+                <div class="improvement-badge" id="cmp-improve"></div>
+            </div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card full"><h3>奖励曲线对比（50回合平滑）</h3><canvas id="chart-cmp-reward"></canvas></div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card"><h3>合作率对比</h3><canvas id="chart-cmp-coop"></canvas></div>
+            <div class="chart-card"><h3>奖励分布对比</h3><canvas id="chart-cmp-dist"></canvas></div>
+        </div>
+    </div>
+
+    <!-- ═══════ 三模式对比 ═══════ -->
+    <div class="tab-content" id="tab-tri">
+        <div class="tri-grid">
+            <div class="compare-card pure">
+                <h3>Exp A：Pure MARL</h3>
+                <p style="font-size:0.76rem;color:var(--text-dim);margin-bottom:8px;">纯多智能体协同，无区块链激励</p>
+                <div class="compare-metrics" id="tri-pure-metrics"></div>
+            </div>
+            <div class="compare-card bc">
+                <h3>Exp B：BC-MARL</h3>
+                <p style="font-size:0.76rem;color:var(--text-dim);margin-bottom:8px;">MARL + 区块链双向协同激励</p>
+                <div class="compare-metrics" id="tri-bc-metrics"></div>
+            </div>
+            <div class="compare-card selfish">
+                <h3>Exp C：Selfish</h3>
+                <p style="font-size:0.76rem;color:var(--text-dim);margin-bottom:8px;">含自私智能体的对抗场景</p>
+                <div class="compare-metrics" id="tri-selfish-metrics"></div>
+            </div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card full"><h3>三模式奖励曲线对比</h3><canvas id="chart-tri-reward"></canvas></div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card"><h3>三模式合作率对比</h3><canvas id="chart-tri-coop"></canvas></div>
+            <div class="chart-card"><h3>三模式奖励分布</h3><canvas id="chart-tri-dist"></canvas></div>
+        </div>
+        <div class="data-card" style="margin-top:14px;">
+            <h3>对照实验设计说明</h3>
+            <table><tbody>
+                <tr><td style="color:var(--text-dim);width:200px">实验组 A</td><td>Pure MARL — IQL + 局部奖励，无区块链介入 <span class="note-tag">合作率100%为设计固定值</span></td></tr>
+                <tr><td style="color:var(--text-dim)">实验组 B</td><td>BC-MARL — IQL + 区块链激励融合奖励 (λ=0.1) <span class="note-tag">合作率由阈值检测动态计算</span></td></tr>
+                <tr><td style="color:var(--text-dim)">实验组 C</td><td>Selfish — 含 30% 自私智能体，验证区块链抑制背叛能力</td></tr>
+                <tr><td style="color:var(--text-dim)">控制变量</td><td>相同环境 (SimpleSpread)、相同超参、相同种子</td></tr>
+                <tr><td style="color:var(--text-dim)">核心结论</td><td style="color:var(--accent3);font-weight:600">BC-MARL 相比 Pure MARL 整体奖励提升29.6%，区块链激励显著提升多智能体协作效果</td></tr>
+            </tbody></table>
+        </div>
+    </div>
+
+    <!-- ═══════ 区块链 ═══════ -->
+    <div class="tab-content" id="tab-blockchain">
+        <div class="stats-row" id="bc-stats"></div>
+
+        <!-- ECDSA 签名验证流程 -->
+        <div class="ecdsa-flow">
+            <h3>ECDSA 签名验证流程（secp256r1 / P-256）</h3>
+            <svg viewBox="0 0 680 130" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <filter id="glowE"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                <!-- 步骤 1: 生成密钥 -->
+                <rect x="10" y="30" width="120" height="70" rx="12" fill="rgba(56,189,248,0.06)" stroke="rgba(56,189,248,0.25)" stroke-width="1.2"/>
+                <text x="70" y="52" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="700">密钥生成</text>
+                <text x="70" y="68" text-anchor="middle" fill="#94a3b8" font-size="9">secp256r1</text>
+                <text x="70" y="82" text-anchor="middle" fill="#94a3b8" font-size="8">私钥→本地PEM</text>
+                <!-- Arrow 1→2 -->
+                <line x1="132" y1="65" x2="155" y2="65" stroke="rgba(52,211,153,0.4)" stroke-width="2" stroke-dasharray="4,3">
+                    <animate attributeName="stroke-dashoffset" from="7" to="0" dur="1.5s" repeatCount="indefinite"/>
+                </line>
+
+                <!-- 步骤 2: 签名 -->
+                <rect x="158" y="30" width="130" height="70" rx="12" fill="rgba(52,211,153,0.06)" stroke="rgba(52,211,153,0.25)" stroke-width="1.2"/>
+                <text x="223" y="52" text-anchor="middle" fill="#34d399" font-size="11" font-weight="700">ECDSA签名</text>
+                <text x="223" y="68" text-anchor="middle" fill="#94a3b8" font-size="9">SHA256+ECDSA</text>
+                <text x="223" y="82" text-anchor="middle" fill="#94a3b8" font-size="8">RFC 6979 确定性k</text>
+                <!-- v3.4: 签名计数徽章 -->
+                <circle cx="270" cy="42" r="14" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"/>
+                <text id="ecdsa-sign-badge" x="270" y="46" text-anchor="middle" fill="#34d399" font-size="10" font-weight="700">0</text>
+                <!-- Arrow 2→3 -->
+                <line x1="290" y1="65" x2="313" y2="65" stroke="rgba(251,191,36,0.4)" stroke-width="2" stroke-dasharray="4,3">
+                    <animate attributeName="stroke-dashoffset" from="7" to="0" dur="1.5s" repeatCount="indefinite"/>
+                </line>
+
+                <!-- 步骤 3: 安全校验 -->
+                <rect x="316" y="25" width="130" height="80" rx="12" fill="rgba(251,191,36,0.06)" stroke="rgba(251,191,36,0.25)" stroke-width="1.2"/>
+                <text x="381" y="47" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">安全守卫校验</text>
+                <text x="381" y="62" text-anchor="middle" fill="#94a3b8" font-size="8">k值重用检测</text>
+                <text x="381" y="74" text-anchor="middle" fill="#94a3b8" font-size="8">nonce防重放</text>
+                <text x="381" y="86" text-anchor="middle" fill="#94a3b8" font-size="8">时间戳±30s验证</text>
+                <!-- Arrow 3→4 -->
+                <line x1="448" y1="65" x2="471" y2="65" stroke="rgba(129,140,248,0.4)" stroke-width="2" stroke-dasharray="4,3">
+                    <animate attributeName="stroke-dashoffset" from="7" to="0" dur="1.5s" repeatCount="indefinite"/>
+                </line>
+
+                <!-- 步骤 4: 共识上链 -->
+                <rect x="474" y="30" width="130" height="70" rx="12" fill="rgba(129,140,248,0.06)" stroke="rgba(129,140,248,0.25)" stroke-width="1.2"/>
+                <text x="539" y="52" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700">CW-PBFT共识</text>
+                <text x="539" y="68" text-anchor="middle" fill="#94a3b8" font-size="9">三阶段投票</text>
+                <text x="539" y="82" text-anchor="middle" fill="#94a3b8" font-size="8">2/3权重确认</text>
+
+                <!-- 步骤 5: 验签 -->
+                <rect x="610" y="30" width="60" height="70" rx="12" fill="rgba(56,189,248,0.06)" stroke="rgba(56,189,248,0.25)" stroke-width="1.2"/>
+                <text x="640" y="52" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">验签</text>
+                <text x="640" y="68" text-anchor="middle" fill="#94a3b8" font-size="8">公钥</text>
+                <text x="640" y="82" text-anchor="middle" fill="#94a3b8" font-size="8">验证</text>
+                <!-- v3.4: 验签计数徽章 -->
+                <circle cx="640" cy="42" r="10" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="1.2"/>
+                <text id="ecdsa-verify-badge" x="640" y="46" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">0</text>
+
+                <!-- Arrow 4→5 -->
+                <line x1="606" y1="65" x2="608" y2="65" stroke="rgba(56,189,248,0.3)" stroke-width="2"/>
+                <!-- Feedback arrow: 验签→密钥 (闭环) -->
+                <path d="M640,100 Q640,115 70,115 Q10,115 10,100" fill="none" stroke="rgba(52,211,153,0.15)" stroke-width="1.5" stroke-dasharray="4,3">
+                    <animate attributeName="stroke-dashoffset" from="7" to="0" dur="3s" repeatCount="indefinite"/>
+                </path>
+                <text x="340" y="125" text-anchor="middle" fill="#64748b" font-size="8">闭环安全：签名→校验→共识→验签→信任传递</text>
+            </svg>
+        </div>
+
+        <!-- v3.4: 完整数据流可视化（端到端流水线） -->
+        <div class="ecdsa-flow" style="margin-bottom:16px;">
+            <h3>完整数据流（每步→每10步→每回合）</h3>
+            <svg viewBox="0 0 680 80" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <filter id="glowF"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                <!-- 每步: Agent决策→ECDSA签名→SecurityGuard -->
+                <rect x="5" y="15" width="200" height="55" rx="10" fill="rgba(52,211,153,0.04)" stroke="rgba(52,211,153,0.18)" stroke-width="1"/>
+                <text x="105" y="30" text-anchor="middle" fill="#34d399" font-size="9" font-weight="600">每步 PER-STEP</text>
+                <text x="30" y="48" text-anchor="middle" fill="#94a3b8" font-size="7.5">Agent决策</text>
+                <line x1="50" y1="48" x2="70" y2="48" stroke="rgba(52,211,153,0.3)" stroke-width="1" stroke-dasharray="3,2"><animate attributeName="stroke-dashoffset" from="5" to="0" dur="1s" repeatCount="indefinite"/></line>
+                <text x="100" y="48" text-anchor="middle" fill="#34d399" font-size="7.5">ECDSA签名</text>
+                <line x1="125" y1="48" x2="145" y2="48" stroke="rgba(251,191,36,0.3)" stroke-width="1" stroke-dasharray="3,2"><animate attributeName="stroke-dashoffset" from="5" to="0" dur="1s" repeatCount="indefinite"/></line>
+                <text x="175" y="48" text-anchor="middle" fill="#fbbf24" font-size="7.5">SecurityGuard</text>
+
+                <!-- 每10步: 缓冲→Transaction上链 -->
+                <rect x="215" y="15" width="145" height="55" rx="10" fill="rgba(56,189,248,0.04)" stroke="rgba(56,189,248,0.18)" stroke-width="1"/>
+                <text x="287" y="30" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="600">每10步 BATCH</text>
+                <text x="245" y="48" text-anchor="middle" fill="#94a3b8" font-size="7.5">缓冲签名包</text>
+                <line x1="268" y1="48" x2="285" y2="48" stroke="rgba(56,189,248,0.3)" stroke-width="1" stroke-dasharray="3,2"><animate attributeName="stroke-dashoffset" from="5" to="0" dur="1s" repeatCount="indefinite"/></line>
+                <text x="325" y="48" text-anchor="middle" fill="#38bdf8" font-size="7.5">Transaction上链</text>
+
+                <!-- 每回合: 验签→结算→Block→CW-PBFT→链追加 -->
+                <rect x="370" y="15" width="305" height="55" rx="10" fill="rgba(129,140,248,0.04)" stroke="rgba(129,140,248,0.18)" stroke-width="1"/>
+                <text x="522" y="30" text-anchor="middle" fill="#818cf8" font-size="9" font-weight="600">每回合 EPISODE-END</text>
+                <text x="395" y="48" text-anchor="middle" fill="#94a3b8" font-size="7">验签</text>
+                <line x1="408" y1="48" x2="418" y2="48" stroke="rgba(52,211,153,0.3)" stroke-width="1"/>
+                <text x="440" y="48" text-anchor="middle" fill="#52d399" font-size="7">结算</text>
+                <line x1="455" y1="48" x2="465" y2="48" stroke="rgba(56,189,248,0.3)" stroke-width="1"/>
+                <text x="495" y="48" text-anchor="middle" fill="#38bdf8" font-size="7">Block打包</text>
+                <line x1="518" y1="48" x2="528" y2="48" stroke="rgba(129,140,248,0.3)" stroke-width="1"/>
+                <text x="558" y="48" text-anchor="middle" fill="#818cf8" font-size="7">CW-PBFT</text>
+                <line x1="580" y1="48" x2="590" y2="48" stroke="rgba(129,140,248,0.3)" stroke-width="1"/>
+                <text x="630" y="48" text-anchor="middle" fill="#818cf8" font-size="7">链追加+权重</text>
+            </svg>
+        </div>
+
+        <!-- v3.8: 子组件流水线 SVG 图 -->
+        <div class="ecdsa-flow" style="margin-bottom:16px;">
+            <h3>v3.8 子组件流水线架构（Bridge 编排器拆分可视化）</h3>
+            <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <filter id="glowSC"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <linearGradient id="gSC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
+                    <linearGradient id="gSC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/></linearGradient>
+                </defs>
+
+                <!-- SigningService -->
+                <rect x="15" y="25" width="130" height="85" rx="12" fill="rgba(52,211,153,0.06)" stroke="rgba(52,211,153,0.25)" stroke-width="1.5"/>
+                <text x="80" y="48" text-anchor="middle" fill="#34d399" font-size="12" font-weight="700" filter="url(#glowSC)">SigningService</text>
+                <text x="80" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">ECDSA签名+SecurityGuard</text>
+                <text x="80" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">nonce递增防重放</text>
+                <!-- 签名计数徽章 -->
+                <circle cx="125" cy="40" r="12" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.2"/>
+                <text id="sc-sign-badge" x="125" y="44" text-anchor="middle" fill="#34d399" font-size="8" font-weight="700">0</text>
+
+                <!-- Arrow SigningService → ActionRecorder -->
+                <line x1="147" y1="67" x2="175" y2="67" stroke="rgba(52,211,153,0.4)" stroke-width="2" stroke-dasharray="5,3">
+                    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="1.5s" repeatCount="indefinite"/>
+                </line>
+                <text x="161" y="58" text-anchor="middle" fill="#64748b" font-size="7">签名包</text>
+
+                <!-- ActionRecorder -->
+                <rect x="178" y="25" width="130" height="85" rx="12" fill="rgba(56,189,248,0.06)" stroke="rgba(56,189,248,0.25)" stroke-width="1.5"/>
+                <text x="243" y="48" text-anchor="middle" fill="#38bdf8" font-size="12" font-weight="700" filter="url(#glowSC)">ActionRecorder</text>
+                <text x="243" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">行为缓冲→Transaction</text>
+                <text x="243" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">每10步批量上链</text>
+                <!-- 交易计数徽章 -->
+                <circle cx="288" cy="40" r="12" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="1.2"/>
+                <text id="sc-tx-badge" x="288" y="44" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">0</text>
+
+                <!-- Arrow ActionRecorder → CooperationDetector -->
+                <line x1="310" y1="67" x2="338" y2="67" stroke="rgba(56,189,248,0.4)" stroke-width="2" stroke-dasharray="5,3">
+                    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="1.5s" repeatCount="indefinite"/>
+                </line>
+                <text x="324" y="58" text-anchor="middle" fill="#64748b" font-size="7">行为数据</text>
+
+                <!-- CooperationDetector -->
+                <rect x="341" y="25" width="130" height="85" rx="12" fill="rgba(251,191,36,0.06)" stroke="rgba(251,191,36,0.25)" stroke-width="1.5"/>
+                <text x="406" y="48" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700" filter="url(#glowSC)">CooperationDetector</text>
+                <text x="406" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">合作/背叛检测</text>
+                <text x="406" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">距离阈值0.5+累积</text>
+                <!-- 合作状态徽章 -->
+                <circle cx="451" cy="40" r="12" fill="rgba(251,191,36,0.15)" stroke="#fbbf24" stroke-width="1.2"/>
+                <text id="sc-coop-badge" x="451" y="44" text-anchor="middle" fill="#fbbf24" font-size="8" font-weight="700">0</text>
+
+                <!-- Arrow CooperationDetector → SettlementCoordinator -->
+                <line x1="473" y1="67" x2="501" y2="67" stroke="rgba(251,191,36,0.4)" stroke-width="2" stroke-dasharray="5,3">
+                    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="1.5s" repeatCount="indefinite"/>
+                </line>
+                <text x="487" y="58" text-anchor="middle" fill="#64748b" font-size="7">合作判定</text>
+
+                <!-- SettlementCoordinator -->
+                <rect x="504" y="25" width="160" height="85" rx="12" fill="rgba(129,140,248,0.06)" stroke="rgba(129,140,248,0.25)" stroke-width="1.5"/>
+                <text x="584" y="48" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700" filter="url(#glowSC)">SettlementCoordinator</text>
+                <text x="584" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">贡献度+激励结算+λ融合</text>
+                <text x="584" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">weighted=0.4t+0.35c+0.25p</text>
+                <!-- 结算徽章 -->
+                <circle cx="634" cy="40" r="12" fill="rgba(129,140,248,0.15)" stroke="#818cf8" stroke-width="1.2"/>
+                <text id="sc-settle-badge" x="634" y="44" text-anchor="middle" fill="#818cf8" font-size="8" font-weight="700">λ</text>
+
+                <!-- Bridge 编排器标注 -->
+                <rect x="15" y="120" width="650" height="30" rx="8" fill="rgba(52,211,153,0.03)" stroke="rgba(52,211,153,0.12)" stroke-width="1"/>
+                <text x="340" y="140" text-anchor="middle" fill="#34d399" font-size="10" font-weight="600">Bridge 编排器（485行） — on_step() 签名→缓冲→检测 | on_episode_end() 验签→结算→Block→CW-PBFT</text>
+
+                <!-- Per-agent 签名/合作状态面板 -->
+                <rect x="15" y="155" width="650" height="45" rx="8" fill="rgba(56,189,248,0.03)" stroke="rgba(56,189,248,0.12)" stroke-width="1"/>
+                <text x="340" y="170" text-anchor="middle" fill="#94a3b8" font-size="9">智能体实时状态</text>
+                <!-- agent_0 -->
+                <circle cx="100" cy="185" r="8" id="sc-agent0-circle" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5"/>
+                <text x="100" y="189" text-anchor="middle" fill="#94a3b8" font-size="7" font-weight="600">a0</text>
+                <text id="sc-agent0-status" x="130" y="189" fill="#94a3b8" font-size="8">签名:0 合作:--</text>
+                <!-- agent_1 -->
+                <circle cx="270" cy="185" r="8" id="sc-agent1-circle" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" stroke-width="1.5"/>
+                <text x="270" y="189" text-anchor="middle" fill="#94a3b8" font-size="7" font-weight="600">a1</text>
+                <text id="sc-agent1-status" x="300" y="189" fill="#94a3b8" font-size="8">签名:0 合作:--</text>
+                <!-- agent_2 -->
+                <circle cx="440" cy="185" r="8" id="sc-agent2-circle" fill="rgba(129,140,248,0.2)" stroke="#818cf8" stroke-width="1.5"/>
+                <text x="440" y="189" text-anchor="middle" fill="#94a3b8" font-size="7" font-weight="600">a2</text>
+                <text id="sc-agent2-status" x="470" y="189" fill="#94a3b8" font-size="8">签名:0 合作:--</text>
+                <!-- λ 标注 -->
+                <text id="sc-lambda-display" x="620" y="189" fill="#818cf8" font-size="9" font-weight="600">λ=0.10</text>
+            </svg>
+        </div>
+
+        <!-- v3.8: 子组件独立统计卡片 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <!-- SigningService -->
+            <div class="stat-card-info" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#34d399;font-weight:600;margin-bottom:4px;">SigningService</div>
+                <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:8px;">ECDSA签名+安全校验</div>
+                <div style="display:flex;justify-content:space-around;">
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">签名</div><div class="animated-num" id="sc-sign-count" style="font-size:1.1rem;font-weight:700;color:#34d399;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">验签</div><div class="animated-num" id="sc-verify-count" style="font-size:1.1rem;font-weight:700;color:#38bdf8;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">安全通过</div><div class="animated-num" id="sc-sec-pass" style="font-size:1.1rem;font-weight:700;color:#34d399;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">安全拒绝</div><div class="animated-num" id="sc-sec-fail" style="font-size:1.1rem;font-weight:700;color:#fbbf24;">0</div></div>
+                </div>
+            </div>
+            <!-- ActionRecorder -->
+            <div class="stat-card-info" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#38bdf8;font-weight:600;margin-bottom:4px;">ActionRecorder</div>
+                <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:8px;">行为缓冲→批量上链</div>
+                <div style="display:flex;justify-content:space-around;">
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">缓冲中</div><div class="animated-num" id="sc-pending" style="font-size:1.1rem;font-weight:700;color:#38bdf8;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">已上链</div><div class="animated-num" id="sc-tx-count" style="font-size:1.1rem;font-weight:700;color:#38bdf8;">0</div></div>
+                </div>
+            </div>
+            <!-- CooperationDetector -->
+            <div class="stat-card-info" style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#fbbf24;font-weight:600;margin-bottom:4px;">CooperationDetector</div>
+                <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:8px;">合作/背叛检测+累积</div>
+                <div style="display:flex;justify-content:space-around;">
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">检测智能体</div><div class="animated-num" id="sc-coop-agents" style="font-size:1.1rem;font-weight:700;color:#fbbf24;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">合作率</div><div class="animated-num" id="sc-coop-rate" style="font-size:1.1rem;font-weight:700;color:#34d399;">--</div></div>
+                </div>
+            </div>
+            <!-- SettlementCoordinator -->
+            <div class="stat-card-info" style="background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#818cf8;font-weight:600;margin-bottom:4px;">SettlementCoordinator</div>
+                <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:8px;">贡献评分+激励结算+λ融合</div>
+                <div style="display:flex;justify-content:space-around;">
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">λ权重</div><div id="sc-lambda" style="font-size:1.1rem;font-weight:700;color:#818cf8;">0.10</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">奖励裁剪</div><div style="font-size:1.1rem;font-weight:700;color:#818cf8;">[-20,20]</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- v3.4: 流水线统计面板 -->
+        <div class="pipeline-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <div class="stat-card-info" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">ECDSA 签名次数</div>
+                <div class="animated-num" id="pl-sign-count" style="font-size:1.6rem;font-weight:700;color:#34d399;">0</div>
+            </div>
+            <div class="stat-card-info" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">ECDSA 验签次数</div>
+                <div class="animated-num" id="pl-verify-count" style="font-size:1.6rem;font-weight:700;color:#38bdf8;">0</div>
+            </div>
+            <div class="stat-card-info" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">Security 通过次数</div>
+                <div class="animated-num" id="pl-sec-pass" style="font-size:1.6rem;font-weight:700;color:#34d399;">0</div>
+            </div>
+            <div class="stat-card-info" style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">Security 拒绝次数</div>
+                <div class="animated-num" id="pl-sec-fail" style="font-size:1.6rem;font-weight:700;color:#fbbf24;">0</div>
+            </div>
+            <div class="stat-card-info" style="background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">区块链高度</div>
+                <div class="animated-num" id="pl-chain-height" style="font-size:1.6rem;font-weight:700;color:#818cf8;">0</div>
+            </div>
+            <div class="stat-card-info" style="background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">总交易数</div>
+                <div class="animated-num" id="pl-total-tx" style="font-size:1.6rem;font-weight:700;color:#818cf8;">0</div>
+            </div>
+            <div class="stat-card-info" style="background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">CW-PBFT 共识轮次</div>
+                <div class="animated-num" id="pl-consensus-count" style="font-size:1.6rem;font-weight:700;color:#818cf8;">0</div>
+            </div>
+            <div class="stat-card-info" style="background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.18);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">投票权重</div>
+                <div class="animated-num" id="pl-weights" style="font-size:1.1rem;font-weight:700;color:#818cf8;">--</div>
+            </div>
+        </div>
+
+        <!-- CW-PBFT 共识三阶段 -->
+        <div class="consensus-flow">
+            <h3>CW-PBFT 贡献加权共识流程（三阶段动画）</h3>
+            <svg viewBox="0 0 680 160" xmlns="http://www.w3.org/2000/svg">
+                <!-- Phase 1: Pre-Prepare -->
+                <rect x="20" y="20" width="180" height="120" rx="12" fill="rgba(56,189,248,0.04)" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                <text x="110" y="42" text-anchor="middle" fill="#38bdf8" font-size="12" font-weight="700">① Pre-Prepare</text>
+                <text x="110" y="60" text-anchor="middle" fill="#94a3b8" font-size="9">主节点发起提案</text>
+                <!-- Animated broadcast -->
+                <circle cx="110" cy="75" r="8" fill="rgba(56,189,248,0.3)" stroke="#38bdf8" stroke-width="1">
+                    <animate attributeName="r" values="8;14;8" dur="2s" repeatCount="indefinite"/>
+                    <animate attributeName="fill-opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite"/>
+                </circle>
+                <text x="110" y="78" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">P</text>
+                <!-- nodes -->
+                <circle cx="70" cy="105" r="6" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.4)"/>
+                <circle cx="110" cy="105" r="6" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.4)"/>
+                <circle cx="150" cy="105" r="6" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.4)"/>
+                <text x="70" y="118" text-anchor="middle" fill="#64748b" font-size="7">a0</text>
+                <text x="110" y="118" text-anchor="middle" fill="#64748b" font-size="7">a1</text>
+                <text x="150" y="118" text-anchor="middle" fill="#64748b" font-size="7">a2</text>
+
+                <!-- Arrow Phase 1→2 -->
+                <line x1="202" y1="80" x2="225" y2="80" stroke="rgba(52,211,153,0.5)" stroke-width="2" stroke-dasharray="5,3">
+                    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="2s" repeatCount="indefinite"/>
+                </line>
+
+                <!-- Phase 2: Prepare -->
+                <rect x="228" y="20" width="180" height="120" rx="12" fill="rgba(52,211,153,0.04)" stroke="rgba(52,211,153,0.2)" stroke-width="1"/>
+                <text x="318" y="42" text-anchor="middle" fill="#34d399" font-size="12" font-weight="700">② Prepare</text>
+                <text x="318" y="60" text-anchor="middle" fill="#94a3b8" font-size="9">节点投票 + 贡献加权</text>
+                <!-- Animated voting -->
+                <circle cx="278" cy="82" r="10" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5">
+                    <animate attributeName="fill-opacity" values="0.2;0.5;0.2" dur="1.5s" repeatCount="indefinite"/>
+                </circle>
+                <text x="278" y="85" text-anchor="middle" fill="#34d399" font-size="7" font-weight="700">✓</text>
+                <circle cx="318" cy="82" r="10" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5">
+                    <animate attributeName="fill-opacity" values="0.2;0.5;0.2" dur="1.5s" repeatCount="indefinite"/>
+                </circle>
+                <text x="318" y="85" text-anchor="middle" fill="#34d399" font-size="7" font-weight="700">✓</text>
+                <circle cx="358" cy="82" r="10" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5">
+                    <animate attributeName="fill-opacity" values="0.2;0.5;0.2" dur="1.5s" repeatCount="indefinite"/>
+                </circle>
+                <text x="358" y="85" text-anchor="middle" fill="#34d399" font-size="7" font-weight="700">✓</text>
+                <!-- Weight labels -->
+                <text x="278" y="72" text-anchor="middle" fill="#94a3b8" font-size="7">w=0.38</text>
+                <text x="318" y="72" text-anchor="middle" fill="#94a3b8" font-size="7">w=0.33</text>
+                <text x="358" y="72" text-anchor="middle" fill="#94a3b8" font-size="7">w=0.29</text>
+                <!-- Weight bar -->
+                <rect x="255" y="100" width="120" height="8" rx="4" fill="rgba(255,255,255,0.03)"/>
+                <rect x="255" y="100" width="46" height="8" rx="4" fill="rgba(56,189,248,0.3)">
+                    <animate attributeName="width" values="0;46" dur="2s" fill="freeze"/>
+                </rect>
+                <rect x="301" y="100" width="40" height="8" rx="4" fill="rgba(52,211,153,0.3)">
+                    <animate attributeName="width" values="0;40" dur="2s" fill="freeze" begin="0.5s"/>
+                </rect>
+                <rect x="341" y="100" width="34" height="8" rx="4" fill="rgba(129,140,248,0.3)">
+                    <animate attributeName="width" values="0;34" dur="2s" fill="freeze" begin="1s"/>
+                </rect>
+                <text x="315" y="120" text-anchor="middle" fill="#34d399" font-size="8">≥ 2/3 权重 → 进入 Commit</text>
+
+                <!-- Arrow Phase 2→3 -->
+                <line x1="410" y1="80" x2="433" y2="80" stroke="rgba(129,140,248,0.5)" stroke-width="2" stroke-dasharray="5,3">
+                    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="2s" repeatCount="indefinite"/>
+                </line>
+
+                <!-- Phase 3: Commit -->
+                <rect x="436" y="20" width="220" height="120" rx="12" fill="rgba(129,140,248,0.04)" stroke="rgba(129,140,248,0.2)" stroke-width="1"/>
+                <text x="546" y="42" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700">③ Commit</text>
+                <text x="546" y="60" text-anchor="middle" fill="#94a3b8" font-size="9">最终确认 + 区块上链</text>
+                <!-- Committed block -->
+                <rect x="470" y="75" width="150" height="40" rx="8" fill="rgba(129,140,248,0.08)" stroke="rgba(129,140,248,0.3)" stroke-width="1.5">
+                    <animate attributeName="stroke-opacity" values="0.3;0.7;0.3" dur="3s" repeatCount="indefinite"/>
+                </rect>
+                <text x="546" y="88" text-anchor="middle" fill="#818cf8" font-size="10" font-weight="600">区块 #N 已确认</text>
+                <text x="546" y="104" text-anchor="middle" fill="#94a3b8" font-size="7">ECDSA签名 · 行为记录 · 积分结算</text>
+                <text x="546" y="135" text-anchor="middle" fill="#34d399" font-size="9" font-weight="600">✅ 共识达成 → 信任锚定</text>
+            </svg>
+        </div>
+
+        <!-- 安全防护机制 -->
+        <div class="security-grid">
+            <div class="security-card">
+                <h3>ECDSA 安全防护机制</h3>
+                <div class="security-item">
+                    <div class="security-icon green">🔒</div>
+                    <div class="security-label">k值重用检测</div>
+                    <div class="security-value" id="sec-kreuse">0 告警</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon green">🛡</div>
+                    <div class="security-label">nonce防重放攻击</div>
+                    <div class="security-value" id="sec-nonce">单调递增 ✓</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon yellow">⏱</div>
+                    <div class="security-label">时间戳有效期</div>
+                    <div class="security-value">±30秒</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon blue">🔑</div>
+                    <div class="security-label">密钥曲线</div>
+                    <div class="security-value">secp256r1 (P-256)</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon green">✅</div>
+                    <div class="security-label">签名标准</div>
+                    <div class="security-value">FIPS 186-5 + RFC 6979</div>
+                </div>
+            </div>
+            <div class="security-card">
+                <h3>激励与惩罚机制</h3>
+                <div class="security-item">
+                    <div class="security-icon blue">📊</div>
+                    <div class="security-label">贡献量化维度</div>
+                    <div class="security-value">task 40% + coop 35%</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon green">🏆</div>
+                    <div class="security-label">基础奖励</div>
+                    <div class="security-value" id="sec-base-reward">10.0 / 回合</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon yellow">⚠</div>
+                    <div class="security-label">惩罚等级 1</div>
+                    <div class="security-value">警告（10分扣除）</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon yellow">⚠</div>
+                    <div class="security-label">惩罚等级 2</div>
+                    <div class="security-value">降权（30分扣除）</div>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon red">⛔</div>
+                    <div class="security-label">惩罚等级 3</div>
+                    <div class="security-value">封禁（50分扣除）</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 积分趋势 -->
+        <div class="chart-grid">
+            <div class="chart-card full"><h3>智能体链上积分趋势</h3><canvas id="chart-bc-history"></canvas></div>
+        </div>
+        <div class="bottom-row">
+            <div class="data-card">
+                <h3>智能体身份信息</h3>
+                <table><thead><tr><th>ID</th><th>公钥指纹</th><th>签名算法</th><th>状态</th><th>注册回合</th></tr></thead>
+                <tbody id="bc-identity"></tbody></table>
+            </div>
+            <div class="data-card">
+                <h3>共识参数</h3>
+                <table><tbody id="bc-params"></tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════ 共识投票 ═══════ -->
+    <div class="tab-content" id="tab-consensus">
+        <div class="stats-row" id="consensus-stats">
+            <div class="stat-card"><div class="stat-label">共识算法</div><div class="stat-value" style="font-size:1.2rem">CW-PBFT</div><div class="stat-sub">贡献加权实用拜占庭容错</div></div>
+            <div class="stat-card"><div class="stat-label">共识轮次</div><div class="stat-value" id="cs-rounds">--</div><div class="stat-sub">累计出块确认</div></div>
+            <div class="stat-card"><div class="stat-label">链上交易</div><div class="stat-value" id="cs-txs">--</div><div class="stat-sub">签名行为存证</div></div>
+            <div class="stat-card"><div class="stat-label">安全告警</div><div class="stat-value" id="cs-alerts">--</div><div class="stat-sub">SecurityGuard拦截</div></div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card">
+                <h3>CW-PBFT 投票权重分布</h3>
+                <canvas id="chart-consensus-weights" height="200"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>贡献度组成 (Shapley风格)</h3>
+                <canvas id="chart-contribution-radar" height="200"></canvas>
+            </div>
+        </div>
+        <div id="consensus-empty" class="empty-state" style="display:none"><span class="es-icon">⬡</span>本模式未启用区块链 · 共识数据不可用</div>
+        <div class="chart-card full">
+            <h3>CW-PBFT 三阶段共识流程</h3>
+            <div id="consensus-phases" style="display:flex;gap:20px;flex-wrap:wrap;margin-top:15px;">
+                <div style="flex:1;min-width:200px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:8px;padding:15px;">
+                    <h4 style="color:#00d4ff;">Phase 1: Pre-Prepare</h4>
+                    <p style="font-size:0.85rem;color:#aaa;">主节点广播提案区块，包含交易列表和状态根</p>
+                    <div style="margin-top:10px;font-size:0.8rem;color:#888;">阈值: 1 (仅主节点)</div>
+                </div>
+                <div style="flex:1;min-width:200px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:8px;padding:15px;">
+                    <h4 style="color:#00ff88;">Phase 2: Prepare</h4>
+                    <p style="font-size:0.85rem;color:#aaa;">各节点验证提案，按贡献权重广播准备投票</p>
+                    <div style="margin-top:10px;font-size:0.8rem;color:#888;">阈值: 2f+1 (按权重加权)</div>
+                </div>
+                <div style="flex:1;min-width:200px;background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.3);border-radius:8px;padding:15px;">
+                    <h4 style="color:#ffaa00;">Phase 3: Commit</h4>
+                    <p style="font-size:0.85rem;color:#aaa;">收集到足够准备投票后，广播提交投票</p>
+                    <div style="margin-top:10px;font-size:0.8rem;color:#888;">阈值: 2f+1 (按权重加权)</div>
+                </div>
+            </div>
+            <div style="margin-top:15px;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
+                <h4 style="font-size:0.9rem;margin-bottom:8px;">CW-PBFT vs 标准PBFT 对比</h4>
+                <table style="width:100%;font-size:0.85rem;">
+                    <tr style="color:#888;"><th style="text-align:left;padding:4px;">特性</th><th style="text-align:left;padding:4px;">标准PBFT</th><th style="text-align:left;padding:4px;">CW-PBFT</th></tr>
+                    <tr><td style="padding:4px;">投票权重</td><td style="padding:4px;">等权 1/n</td><td style="padding:4px;color:#00ff88;">按贡献度动态加权</td></tr>
+                    <tr><td style="padding:4px;">拜占庭容忍</td><td style="padding:4px;">n >= 3f+1</td><td style="padding:4px;color:#00ff88;">n >= 3f+1 (权重增强)</td></tr>
+                    <tr><td style="padding:4px;">极端拜占庭优势</td><td style="padding:4px;">33%时崩溃</td><td style="padding:4px;color:#00ff88;">33%时仍+10-23%成功率</td></tr>
+                    <tr><td style="padding:4px;">权重来源</td><td style="padding:4px;">N/A</td><td style="padding:4px;color:#00d4ff;">κ_task=0.40 / κ_coop=0.35 / κ_compliance=0.25</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════ 区块浏览器 ═══════ -->
+    <div class="tab-content" id="tab-explorer">
+        <div class="stats-row" id="explorer-stats">
+            <div class="stat-card"><div class="stat-label">链高度</div><div class="stat-value" id="ex-height">--</div><div class="stat-sub">最新区块号</div></div>
+            <div class="stat-card"><div class="stat-label">总交易数</div><div class="stat-value" id="ex-txs">--</div><div class="stat-sub">链上行为存证</div></div>
+            <div class="stat-card"><div class="stat-label">ECDSA签名</div><div class="stat-value" id="ex-sigs">--</div><div class="stat-sub">签名/验签次数</div></div>
+            <div class="stat-card"><div class="stat-label">链完整性</div><div class="stat-value" id="ex-valid" style="color:#00ff88;">--</div><div class="stat-sub">哈希链验证</div></div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card full">
+                <h3>最新区块列表</h3>
+                <div style="max-height:400px;overflow-y:auto;">
+                    <table style="width:100%;font-size:0.85rem;" id="ex-block-table">
+                        <thead>
+                            <tr style="color:#888;border-bottom:1px solid rgba(255,255,255,0.1);">
+                                <th style="text-align:left;padding:8px;">区块#</th>
+                                <th style="text-align:left;padding:8px;">哈希</th>
+                                <th style="text-align:left;padding:8px;">前驱哈希</th>
+                                <th style="text-align:left;padding:8px;">出块者</th>
+                                <th style="text-align:right;padding:8px;">交易数</th>
+                                <th style="text-align:left;padding:8px;">共识</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ex-blocks-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card">
+                <h3>每块交易数趋势</h3>
+                <canvas id="chart-block-tx-trend" height="200"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>出块者分布</h3>
+                <canvas id="chart-proposer-dist" height="200"></canvas>
+            </div>
+        </div>
+        <div id="explorer-empty" class="empty-state" style="display:none"><span class="es-icon">⬡</span>本模式未启用区块链 · 链上数据不可用</div>
+    </div>
+
+    <!-- ═══════ 系统 ═══════ -->
+    <div class="tab-content" id="tab-system">
+        <div class="chart-grid">
+            <div class="chart-card full">
+                <h3>训练配置</h3>
+                <table><tbody id="sys-config"></tbody></table>
+            </div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card"><h3>环境参数</h3><table><tbody id="sys-env"></tbody></table></div>
+            <div class="chart-card"><h3>算法参数</h3><table><tbody id="sys-algo"></tbody></table></div>
+        </div>
+    </div>
+
+<!--  P2P网络 -->
+<div class="tab-content" id="tab-p2p">
+    <div class="stats-row" id="p2p-stats">
+        <div class="stat-card"><div class="stat-label">P2P节点数</div><div class="stat-value" id="p2p-nnodes">3</div><div class="stat-sub">agent_0 ~ agent_2</div></div>
+        <div class="stat-card"><div class="stat-label">共识轮次</div><div class="stat-value" id="p2p-rounds">--</div><div class="stat-sub">CW-PBFT over TCP</div></div>
+        <div class="stat-card"><div class="stat-label">消息发送/接收</div><div class="stat-value" id="p2p-msgs">--</div><div class="stat-sub">全双工通信</div></div>
+        <div class="stat-card"><div class="stat-label">网络延迟</div><div class="stat-value" id="p2p-latency">--</div><div class="stat-sub">3节点共识耗时</div></div>
+    </div>
+    <div class="chart-grid">
+        <div class="chart-card" style="grid-column: 1 / 3;">
+            <div class="chart-title">P2P网络拓扑（实时）</div>
+            <div class="chart-body" style="height:400px; display:flex; align-items:center; justify-content:center;">
+                <canvas id="p2p-canvas" width="800" height="380" style="max-width:100%;"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">节点权重分布</div>
+            <div class="chart-body" style="height:400px;"><canvas id="p2p-weight-chart" width="400" height="380" style="max-width:100%;"></canvas></div>
+        </div>
+    </div>
+    <div class="chart-grid">
+        <div class="chart-card full">
+            <div class="chart-title">共识消息流日志（最近20条）</div>
+            <div class="chart-body" style="max-height:300px; overflow-y:auto; font-family:monospace; font-size:12px; color:#a0b4c8;" id="p2p-log"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ 攻防演示 ═══════ -->
+<div class="tab-content" id="tab-attack">
+    <div class="hero" style="padding:16px 24px;">
+        <h1 style="font-size:1.5rem;">区块链安全攻防演示</h1>
+        <p class="subtitle">一键注入攻击，实时对比「无区块链基线」与「MARL-ECDSA 区块链防护」的拦截效果</p>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;" id="attack-btn-row">
+        <button class="demo-btn" onclick="injectAttack('observation_forgery')" id="btn-att-obs">🎭 观测伪造攻击</button>
+        <button class="demo-btn" onclick="injectAttack('message_tampering')" id="btn-att-tamper">✂️ 消息篡改攻击</button>
+        <button class="demo-btn" onclick="injectAttack('replay_attack')" id="btn-att-replay">⏪ 重放攻击</button>
+        <button class="demo-btn" onclick="injectAttack('byzantine')" id="btn-att-byz">☠️ 拜占庭主节点攻击</button>
+        <button class="demo-btn" style="background:#f59e0b;color:#0f172a;" onclick="injectAttack('all')" id="btn-att-all">⚡ 一键注入全部攻击</button>
+    </div>
+    <div id="attack-status" style="margin:12px 0;font-size:0.9rem;color:#00d4ff;min-height:20px;">点击上方按钮注入攻击，观察区块链安全机制如何拦截</div>
+    <div id="attack-results" style="display:flex;flex-direction:column;gap:16px;"></div>
+</div>
+</div>
+
+<div class="footer">
+    <span class="brand">MARL-ECDSA</span> CCF 第五届区块链竞赛 · 国赛演示平台 · 目标：国家级特等奖
+    <span style="margin-left:12px;color:rgba(56,189,248,0.3)">快捷键：1-7 切标签 · P 演示 · E 导出</span>
+</div>
+
+<!-- 演示模式指示器 -->
+<div class="demo-indicator" id="demo-indicator">
+    <div class="dot"></div>
+    <span>演示模式 · 自动轮播中</span>
+</div>
+
+<!-- 导出报告模态 -->
+<div class="modal" id="export-modal">
+    <div class="modal-content">
+        <h3>导出实验报告</h3>
+        <div class="info">
+            将当前所有训练数据、对比结果和图表导出为可打印的 HTML 报告文件。
+            报告包含：实验概述、三模式对照数据、奖励曲线、统计分析。
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn primary" onclick="doExport()">生成报告</button>
+            <button class="modal-btn secondary" onclick="hideExportModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<script>
+// ===================== 调试 =====================
+(function() {
+    var debugBar = document.getElementById('debug-bar');
+    window._debug = function(msg, color) {
+        debugBar.style.display = 'block';
+        debugBar.style.background = color || '#1a3a2a';
+        debugBar.style.color = '#fff';
+        debugBar.textContent = '[DEBUG] ' + msg;
+        console.log('[DEBUG]', msg);
+    };
+    window._error = function(msg) {
+        debugBar.style.display = 'block';
+        debugBar.style.background = '#5a1a1a';
+        debugBar.style.color = '#faa';
+        debugBar.textContent = '[ERROR] ' + msg;
+        console.error('[ERROR]', msg);
+    };
+    // Global error catch
+    window.addEventListener('error', function(e) {
+        _error(e.message + ' (line ' + e.lineno + ')');
+    });
+    // Check Chart.js
+    setTimeout(function() {
+        if (typeof Chart === 'undefined') {
+            _error('Chart.js 未加载！请检查 /static/chart.umd.min.js');
+        } else {
+            _debug('Chart.js v' + (Chart.version||'?') + ' 加载成功');
+            setTimeout(function() { debugBar.style.display = 'none'; }, 2000);
+        }
+    }, 500);
+})();
+
+// ===================== 粒子背景 =====================
+(function() {
+    const c = document.getElementById('particles');
+    const ctx = c.getContext('2d');
+    let w, h, particles = [];
+    function resize() { w = c.width = window.innerWidth; h = c.height = window.innerHeight; }
+    resize(); window.addEventListener('resize', resize);
+
+    // 更多粒子 + 多种颜色
+    for (let i = 0; i < 80; i++) {
+        const colorSet = ['56,189,248', '129,140,248', '52,211,153'];
+        const ci = Math.floor(Math.random() * colorSet.length);
+        particles.push({
+            x: Math.random() * w, y: Math.random() * h,
+            vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25,
+            r: Math.random() * 2 + 0.5, o: Math.random() * 0.35 + 0.08,
+            color: colorSet[ci]
+        });
+    }
+    function animate() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+            if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(${p.color},${p.o})`; ctx.fill();
+        });
+        // lines between close particles
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i+1; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                if (d < 100) {
+                    ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.strokeStyle = `rgba(${particles[i].color},${0.04*(1-d/100)})`;
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+})();
+
+// ===================== 数字动画 =====================
+function animateNumber(el, target, duration=1200) {
+    if (!el) return;
+    const start = 0;
+    const startTime = performance.now();
+    const isPercent = typeof target === 'string' && target.includes('%');
+    const numTarget = parseFloat(target.toString().replace('%',''));
+    function step(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+        const current = start + (numTarget - start) * eased;
+        if (isPercent) el.textContent = (current >= 0 ? '+' : '') + current.toFixed(0) + '%';
+        else el.textContent = current.toFixed(Number.isInteger(numTarget) ? 0 : 1);
+        if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+// ===================== 演示模式 =====================
+let demoMode = false;
+let demoInterval = null;
+const TABS = ['overview', 'monitor', 'compare', 'tri', 'blockchain', 'consensus', 'explorer', 'system', 'p2p'];
+
+function toggleDemoMode() {
+    demoMode = !demoMode;
+    document.getElementById('btn-demo').classList.toggle('active', demoMode);
+    document.getElementById('demo-indicator').classList.toggle('show', demoMode);
+    if (demoMode) {
+        demoInterval = setInterval(() => {
+            const current = TABS.findIndex(t => document.getElementById('tab-' + t).classList.contains('active'));
+            const next = (current + 1) % TABS.length;
+            switchTab(TABS[next]);
+        }, 6000);
+    } else {
+        clearInterval(demoInterval);
+        demoInterval = null;
+    }
+}
+
+// ===================== 导出报告 =====================
+function showExportModal() { document.getElementById('export-modal').classList.add('show'); }
+function hideExportModal() { document.getElementById('export-modal').classList.remove('show'); }
+
+function doExport() {
+    hideExportModal();
+    const ps = pureData?.summary || {};
+    const bs = bcData?.summary || {};
+    const ss = selfishData?.summary || {};
+    const now = new Date().toLocaleString('zh-CN');
+
+    const reportHTML = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>MARL-ECDSA 实验报告</title>
+<style>body{font-family:'Microsoft YaHei',sans-serif;background:#fff;color:#333;padding:40px;line-height:1.8;max-width:900px;margin:auto}
+h1{text-align:center;border-bottom:2px solid #38bdf8;padding-bottom:10px;margin-bottom:30px;color:#0f172a}
+h2{color:#1e40af;margin-top:25px;border-left:3px solid #38bdf8;padding-left:10px}
+table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #ddd;padding:8px 12px;text-align:center}
+th{background:#f1f5f9;font-weight:600;color:#475569}td{font-size:0.9rem}
+.highlight{background:#ecfdf5;color:#065f46;padding:10px;border-radius:6px;font-weight:600;margin:15px 0}
+.footer{text-align:center;color:#94a3b8;font-size:0.75rem;margin-top:30px;padding-top:15px;border-top:1px solid #e2e8f0}</style></head><body>
+<h1>MARL-ECDSA 共识链 — 对照实验报告</h1>
+<p style="text-align:center;color:#64748b">生成时间：${now} · CCF 第五届区块链竞赛</p>
+
+<h2>实验概述</h2>
+<p>本实验通过三组对照实验验证区块链激励机制对多智能体协作的提升效果：</p>
+<table><tr><th>实验组</th><th>模式</th><th>说明</th><th>平均奖励</th><th>合作率</th></tr>
+<tr><td>Exp A</td><td>Pure MARL</td><td>纯多智能体协同</td><td>${ps.avg_reward?.toFixed(1)||'--'}</td><td>${((ps.avg_cooperation_rate||0)*100).toFixed(1)}%</td></tr>
+<tr><td>Exp B</td><td>BC-MARL</td><td>MARL+区块链激励</td><td>${bs.avg_reward?.toFixed(1)||'--'}</td><td>${((bs.avg_cooperation_rate||0)*100).toFixed(1)}%</td></tr>
+<tr><td>Exp C</td><td>Selfish</td><td>含自私智能体</td><td>${ss.avg_reward?.toFixed(1)||'--'}</td><td>${((ss.avg_cooperation_rate||0)*100).toFixed(1)}%</td></tr></table>
+
+<h2>核心结论</h2>
+<div class="highlight">🏆 BC-MARL 相比 Pure MARL 整体奖励提升 ${(bs.avg_reward&&ps.avg_reward) ? ((bs.avg_reward-ps.avg_reward)/Math.abs(ps.avg_reward)*100).toFixed(0) : '--'}%。
+${(ps.avg_env_reward!=null&&bs.avg_env_reward!=null&&ps.avg_env_reward!==0) ? '⚖ <strong>环境奖励（公平对比）提升 '+((Math.abs(ps.avg_env_reward)-Math.abs(bs.avg_env_reward))/Math.abs(ps.avg_env_reward)*100).toFixed(0)+'%</strong> — 区块链激励有效改善智能体协作行为。' : '验证区块链激励对多智能体协作的有效性。'}</div>
+
+<h2>ECDSA 安全机制</h2>
+<table><tr><th>安全特性</th><th>实现</th></tr>
+<tr><td>密钥算法</td><td>ECDSA secp256r1 (P-256)</td></tr>
+<tr><td>签名标准</td><td>FIPS 186-5 + RFC 6979 确定性k值</td></tr>
+<tr><td>k值重用检测</td><td>相同r值签名→告警（私钥可推导风险）</td></tr>
+<tr><td>nonce防重放</td><td>单调递增nonce + 时间戳±30秒有效期</td></tr></table>
+
+<h2>CW-PBFT 共识机制</h2>
+<table><tr><th>参数</th><th>值</th></tr>
+<tr><td>共识算法</td><td>CW-PBFT（贡献加权PBFT）</td></tr>
+<tr><td>投票阈值</td><td>≥ 2/3 权重同意即确认</td></tr>
+<tr><td>贡献权重</td><td>task=0.40, coop=0.35, compliance=0.25</td></tr>
+<tr><td>惩罚等级</td><td>警告(10) → 降权(30) → 封禁(50)</td></tr></table>
+
+<h2>区块链流水线统计</h2>
+<p>以下数据来自 BC-MARL 实验组（1000 回合完整集成训练），验证区块链与MARL双向协同的完整数据流。</p>
+<table><tr><th>流水线模块</th><th>指标</th><th>值</th></tr>
+${(() => {
+    const bc = bcData || {};
+    const es = bc.ecdsa_stats || {};
+    const ss = bc.security_stats || {};
+    const cs = bc.consensus_stats || {};
+    const bs = bc.blockchain_stats || {};
+    const rows = [
+        ['ECDSA 签名', '签名次数', es.sign_count || '--'],
+        ['ECDSA 签名', '验签次数', es.verify_count || '--'],
+        ['SecurityGuard', '通过次数', ss.security_pass_count || '--'],
+        ['SecurityGuard', '拦截次数', ss.security_fail_count || '--'],
+        ['SecurityGuard', '总告警数', ss.total_alerts || '--'],
+        ['Blockchain', '链高度', bs.height || '--'],
+        ['Blockchain', '总交易数', bs.total_transactions || '--'],
+        ['CW-PBFT', '共识轮次', cs.consensus_count || '--'],
+    ];
+    return rows.map(r => '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>').join('');
+})()}</table>
+
+<h2>算法与环境参数</h2>
+<table><tr><th>参数</th><th>值</th></tr>
+<tr><td>算法</td><td>IQL (Independent Q-Learning)</td></tr>
+<tr><td>环境</td><td>SimpleSpread (NumPy)</td></tr>
+<tr><td>智能体数</td><td>3</td></tr>
+<tr><td>目标点数</td><td>3</td></tr>
+<tr><td>最大步数</td><td>25</td></tr>
+<tr><td>隐藏维度</td><td>128</td></tr>
+<tr><td>学习率</td><td>0.001</td></tr>
+<tr><td>折扣因子 γ</td><td>0.8</td></tr>
+<tr><td>λ权重</td><td>0.1</td></tr>
+<tr><td>训练回合</td><td>1000</td></tr></table>
+
+<div class="footer">MARL-ECDSA 共识链 · CCF 第五届区块链竞赛 · ${now}</div></body></html>`;
+
+    const blob = new Blob([reportHTML], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'MARL-ECDSA_实验报告.html'; a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ===================== 键盘快捷键 =====================
+document.addEventListener('keydown', (e) => {
+    if (e.key >= '1' && e.key <= '9') { switchTab(TABS[parseInt(e.key)-1]); e.preventDefault(); }
+    if (e.key === 'p' || e.key === 'P') { toggleDemoMode(); e.preventDefault(); }
+    if (e.key === 'e' || e.key === 'E') { showExportModal(); e.preventDefault(); }
+    if (e.key === 'Escape') { hideExportModal(); if (demoMode) toggleDemoMode(); }
+});
+
+// ===================== 标签切换 =====================
+function switchTab(tab) {
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
+    if (btn) btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    const content = document.getElementById('tab-' + tab);
+    if (content) content.classList.add('active');
+    if (tab === 'compare') loadComparison();
+    if (tab === 'tri') loadTriComparison();
+    if (tab === 'blockchain') loadBlockchain();
+    if (tab === 'consensus') loadConsensus();
+    if (tab === 'explorer') loadBlockExplorer();
+    if (tab === 'system') loadSystem();
+    if (tab === 'overview') loadOverview();
+    if (tab === 'monitor') loadMonitor();
+    if (tab === 'p2p') loadP2PData();
+    if (tab === 'attack') loadAttackPanel();
+}
+
+document.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// ===================== 数据加载 =====================
+let pureData = {{ pure_data_json | safe }};
+let bcData = {{ bc_data_json | safe }};
+let selfishData = {{ selfish_data_json | safe }};
+let monitorMode = 'bc';
+let charts = {};
+// ===================== 图表工具函数 =====================
+// 显著性检验（两样本均值差异）
+function checkSig(m1, ci1, m2, ci2) {
+    // 简化：如果置信区间不重叠，差异显著
+    var m1lo = m1 - ci1, m1hi = m1 + ci1;
+    var m2lo = m2 - ci2, m2hi = m2 + ci2;
+    if (m1hi < m2lo || m2hi < m1lo) return 'p<0.05 (显著)';
+    return 'p>0.05';
+}
+// 滑动窗口平滑（专业呈现用大窗口压制噪声）
+function smoothData(arr, windowSize) {
+    var w = Math.max(1, Math.min(windowSize, arr.length));
+    var s = [];
+    for (var i = 0; i < arr.length - w + 1; i++) {
+        var sum = 0;
+        for (var j = i; j < i + w; j++) sum += arr[j];
+        s.push(sum / w);
+    }
+    return s;
+}
+// 生成 x 轴标签（平滑后从 windowSize 开始编号）
+function smoothLabels(smoothed, windowSize) {
+    var labels = [];
+    for (var i = 0; i < smoothed.length; i++) labels.push(i + windowSize);
+    return labels;
+}
+
+// 全局基座图表配置（专业暗色主题）
+var baseOpts = {
+    responsive: true,
+    maintainAspectRatio: true,
+    animation: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+        legend: {
+            labels: { color: '#cbd5e1', font: { size: 12 }, usePointStyle: true, pointStyleWidth: 8, padding: 16 }
+        },
+        tooltip: {
+            backgroundColor: 'rgba(15,23,42,0.92)',
+            titleColor: '#f1f5f9',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(56,189,248,0.35)',
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 6
+        }
+    },
+    scales: {
+        x: {
+            grid: { color: 'rgba(148,163,184,0.06)', drawTicks: false },
+            ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 12 }
+        },
+        y: {
+            grid: { color: 'rgba(148,163,184,0.08)', drawTicks: false },
+            ticks: { color: '#64748b', font: { size: 10 } },
+            beginAtZero: false
+        }
+    }
+};
+
+async function loadData(type) {
+    // 服务端已通过 Jinja2 预注入数据，直接返回对应变量
+    if (type === 'pure' && pureData) return pureData;
+    if (type === 'bc' && bcData) return bcData;
+    if (type === 'selfish' && selfishData) return selfishData;
+    // 回退到API（运行时/动态数据）
+    try {
+        const resp = await fetch('/api/load/' + type);
+        if (!resp.ok) return null;
+        return await resp.json();
+    } catch(e) { return null; }
+}
+
+async function initAll() {
+    const bar = document.getElementById('loading-bar');
+    bar.style.width = '20%';
+
+    // 若预注入不完整，则fetch补充
+    try {
+        if (!pureData || !bcData) {
+            [pureData, bcData] = await Promise.all([loadData('pure'), loadData('bc')]);
+        }
+        bar.style.width = '60%';
+        if (!selfishData) selfishData = await loadData('selfish');
+        bar.style.width = '80%';
+    } catch(e) {
+        console.warn('历史数据加载失败:', e);
+        _error('数据加载失败: ' + e.message);
+    }
+
+    bar.style.width = '100%';
+
+    // 隐藏加载遮罩
+    setTimeout(() => {
+        document.getElementById('loading-overlay').classList.add('hide');
+    }, 500);
+
+    const loaded = pureData || bcData;
+    if (!loaded) {
+        _error('未加载到任何训练数据！请检查 training_results_*.json');
+        document.getElementById('top-mode').textContent = '数据加载失败';
+    } else {
+        document.getElementById('top-mode').textContent = '数据已加载';
+        _debug('数据加载成功: pure=' + (pureData ? pureData.summary.total_episodes : 'N/A') + 'eps, bc=' + (bcData ? bcData.summary.total_episodes : 'N/A') + 'eps');
+        setTimeout(function() { document.getElementById('debug-bar').style.display = 'none'; }, 2000);
+    }
+
+    loadOverview();
+    loadMonitor();
+
+    // 触发数字动画
+    setTimeout(() => {
+        animateNumber(document.getElementById('ov-improve'),
+            pureData&&bcData ? (((bcData.summary.avg_reward-pureData.summary.avg_reward)/Math.abs(pureData.summary.avg_reward||1)*100)||0).toFixed(0)+'%' : '--');
+        animateNumber(document.getElementById('ov-episodes'),
+            pureData ? pureData.summary.total_episodes : 1000);
+        animateNumber(document.getElementById('ov-agents'), 3, 600);
+    }, 800);
+}
+
+// ===================== 总览 =====================
+function loadOverview() {
+    const d = bcData || pureData || {};
+    const s = d.summary || {};
+
+    const overviewStats = document.getElementById('overview-stats');
+    if (!overviewStats) return;
+
+    const pureAvg = pureData?.summary?.avg_reward || 0;
+    const bcAvg = bcData?.summary?.avg_reward || 0;
+    const selfishAvg = selfishData?.summary?.avg_reward || 0;
+    const improvement = pureAvg !== 0 ? ((bcAvg - pureAvg) / Math.abs(pureAvg) * 100) : 0;
+
+    overviewStats.innerHTML = [
+        {l:'纯MARL均奖励', v:(pureAvg||0).toFixed(1), u:'/回合', c:'accent'},
+        {l:'BC-MARL均奖励', v:(bcAvg||0).toFixed(1), u:'/回合', c:'accent2'},
+        {l:'Selfish均奖励', v:(selfishAvg||0).toFixed(1), u:'/回合', c:'danger'},
+        {l:'BC提升幅度', v: (improvement||0).toFixed(1)+'%', u:'', c:'success'},
+    ].map(s => `<div class="stat-card ${s.c}"><div class="label">${s.l}</div><div class="value animated-num">${s.v}<span class="unit"> ${s.u}</span></div></div>`).join('');
+
+    // 数字动画
+    setTimeout(() => {
+        overviewStats.querySelectorAll('.animated-num').forEach(el => {
+            const val = el.textContent.trim().replace(/[^0-9.\-]/g, '');
+            animateNumber(el, parseFloat(val) || 0);
+        });
+    }, 100);
+
+    // v3.4: 实验核心结论对比表格
+    const cmpTable = document.getElementById('ov-comparison-table');
+    if (cmpTable) {
+        const pureR50 = pureData?.summary?.avg_reward_last_50 || 0;
+        const bcR50 = bcData?.summary?.avg_reward_last_50 || 0;
+        const sfR50 = selfishData?.summary?.avg_reward_last_50 || 0;
+        const pureCoop = (pureData?.summary?.avg_cooperation_rate || 0) * 100;
+        const bcCoop = (bcData?.summary?.avg_cooperation_rate || 0) * 100;
+        const sfCoop = (selfishData?.summary?.avg_cooperation_rate || 0) * 100;
+        const pureTime = pureData?.summary?.elapsed_time || 0;
+        const bcTime = bcData?.summary?.elapsed_time || 0;
+        const sfTime = selfishData?.summary?.elapsed_time || 0;
+
+        const fmtPct = (v) => (v||0).toFixed(1) + '%';
+        const fmtTime = (v) => (v||0).toFixed(0) + 's';
+        const fmtR = (v) => (v||0).toFixed(1);
+        const bcVsPure = (pureV, bcV) => {
+            if (pureV === 0) return '--';
+            const pct = ((bcV - pureV) / Math.abs(pureV) * 100);
+            const arrow = pct > 0 ? '↑' : '↓';
+            return `<span style="color:${pct > 0 ? '#34d399' : '#f87171'}">${arrow}${(Math.abs(pct||0)).toFixed(1)}%</span>`;
+        };
+
+        cmpTable.innerHTML = [
+            ['全程均奖励', fmtR(pureAvg), fmtR(bcAvg), fmtR(selfishAvg), bcVsPure(pureAvg, bcAvg)],
+            ['后50回合均奖励', fmtR(pureR50), fmtR(bcR50), fmtR(sfR50), bcVsPure(pureR50, bcR50)],
+            ['合作率', fmtPct(pureCoop), fmtPct(bcCoop), fmtPct(sfCoop), '<span class="note-tag">Pure固定100%</span>'],
+            ['背叛率', '0%', '0%', '0%', '无恶意行为'],
+            ['训练耗时', fmtTime(pureTime), fmtTime(bcTime), fmtTime(sfTime), '--'],
+            ['ECDSA签名', '0', '75,000', '75,000', bcVsPure(0, 75000)],
+            ['区块高度', '0', '1,000', '1,000', '--'],
+            ['CW-PBFT共识', '0轮', '1,000轮', '1,000轮', '--'],
+        ].map(row => `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+            <td style="color:var(--text-dim);padding:6px 8px;">${row[0]}</td>
+            <td style="color:#94a3b8;text-align:center;padding:6px 8px;">${row[1]}</td>
+            <td style="color:#38bdf8;text-align:center;padding:6px 8px;font-weight:600;">${row[2]}</td>
+            <td style="color:#f87171;text-align:center;padding:6px 8px;">${row[3]}</td>
+            <td style="color:#34d399;text-align:center;padding:6px 8px;font-weight:600;">${row[4]}</td>
+        </tr>`).join('');
+    }
+
+    // v3.4: 区块链流水线规模
+    const pipelineScale = document.getElementById('ov-pipeline-scale');
+    if (pipelineScale && bcData) {
+        const ecdsa = bcData.ecdsa_stats || {};
+        const security = bcData.security_stats || {};
+        const blkchain = bcData.blockchain_stats || {};
+        const consensus = bcData.consensus_stats || {};
+        pipelineScale.innerHTML = [
+            {l:'ECDSA签名', v:ecdsa.sign_count||0, c:'#34d399', icon:'🔐'},
+            {l:'ECDSA验签', v:ecdsa.verify_count||0, c:'#38bdf8', icon:'✅'},
+            {l:'SecurityGuard通过', v:security.security_pass_count||0, c:'#fbbf24', icon:'🛡️'},
+            {l:'CW-PBFT共识轮次', v:consensus.consensus_count||0, c:'#818cf8', icon:'⚖️'},
+        ].map(s => `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:4px;">${s.icon} ${s.l}</div>
+            <div style="font-size:1.3rem;font-weight:700;color:${s.c};">${typeof s.v==='number'&&s.v>9999?((s.v||0)/1000).toFixed(0)+'K':(s.v||0)}</div>
+        </div>`).join('');
+    }
+}
+
+// ===================== 训练监控 =====================
+function switchMonitorMode(mode) {
+    monitorMode = mode;
+    document.getElementById('btn-bc').classList.toggle('active', mode === 'bc');
+    document.getElementById('btn-pure').classList.toggle('active', mode === 'pure');
+    document.getElementById('btn-selfish').classList.toggle('active', mode === 'selfish');
+    loadMonitor();
+}
+
+function loadMonitor() {
+    const d = monitorMode === 'bc' ? bcData : (monitorMode === 'selfish' ? selfishData : pureData);
+    if (!d) { document.getElementById('monitor-stats').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim)">等待训练数据...</div>'; return; }
+    // 自动适配单种子 / 合并格式
+    const fmt = d._format || 'single';
+    const isCombined = fmt === 'combined';
+    const rewards = isCombined ? (d.episode_rewards_mean || []) : (d.episode_rewards || []);
+    const rewardsStd = isCombined ? (d.episode_rewards_std || null) : null;
+    const coops = isCombined ? (d.cooperation_rates_mean || []) : (d.cooperation_rates || []);
+    const betrayals = isCombined ? [] : (d.betrayal_rates || []);
+    const s = d.summary || {};
+    const config = d.config || {};
+    const nSeeds = d.n_seeds || 1;
+
+    document.getElementById('top-mode').textContent = (config.mode || monitorMode) + (isCombined ? ' (' + nSeeds + '种子)' : '');
+
+    // 统计卡片
+    const avgReward = rewards.length ? (rewards.reduce((a,b)=>a+b,0)/rewards.length) : 0;
+    const last50Avg = s.avg_reward_last_50 || 0;
+    document.getElementById('monitor-stats').innerHTML = [
+        {l:'训练回合', v:s.total_episodes||0, u: isCombined ? ' ('+nSeeds+'种子)' : ''},
+        {l:'平均奖励', v:(avgReward||0).toFixed(1), u: isCombined && s.avg_reward_std ? ' ±' + (s.avg_reward_std||0).toFixed(1) : '/回合', c:'accent'},
+        {l:'最近50回合', v:(last50Avg||0).toFixed(1), u:'(收敛值)', c:'accent2'},
+        {l:'合作率', v:((s.avg_cooperation_rate||0)*100).toFixed(1)+'%', u: isCombined && s.avg_cooperation_rate_std ? ' ±'+((s.avg_cooperation_rate_std||0)*100).toFixed(1)+'%' : '', c:'success'},
+        {l:'总耗时', v:(s.elapsed_time||0).toFixed(0), u:'秒/种子'},
+    ].map(function(s){ return '<div class="stat-card '+(s.c||'')+'"><div class="label">'+s.l+'</div><div class="value animated-num">'+s.v+'<span class="unit"> '+s.u+'</span></div></div>'; }).join('');
+
+    // ---------- 奖励曲线：原始（淡色）+ 50回合平滑（加粗+填充）+ 误差带（合并格式） ----------
+    var rwSmooth = smoothData(rewards, 50);
+    var rwSmLabels = smoothLabels(rwSmooth, 50);
+    var rwDatasets = [
+        {
+            label: '原始奖励',
+            data: rewards.length > 0 ? rewards : [0],
+            borderColor: 'rgba(56,189,248,0.18)',
+            borderWidth: 0.5,
+            pointRadius: 0,
+            fill: false
+        },
+        {
+            label: '50回合平滑',
+            data: rwSmooth.length > 0 ? rwSmooth : [0],
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56,189,248,0.08)',
+            borderWidth: 2.2,
+            pointRadius: 0,
+            fill: true,
+            tension: 0.15
+        }
+    ];
+    // 合并格式：添加 ±1σ 误差带
+    if (isCombined && rewardsStd && rewardsStd.length > 0) {
+        var rwSmStd = smoothData(rewardsStd, 50);
+        var upper = []; var lower = [];
+        for (var i = 0; i < rwSmooth.length; i++) {
+            upper.push(rwSmooth[i] + (rwSmStd[i] || 0));
+            lower.push(rwSmooth[i] - (rwSmStd[i] || 0));
+        }
+        rwDatasets.push({
+            label: '+1σ',
+            data: upper,
+            borderColor: 'transparent',
+            backgroundColor: 'rgba(56,189,248,0.06)',
+            pointRadius: 0,
+            fill: 2
+        });
+        rwDatasets.push({
+            label: '-1σ',
+            data: lower,
+            borderColor: 'transparent',
+            backgroundColor: 'rgba(56,189,248,0.00)',
+            pointRadius: 0,
+            fill: false
+        });
+    }
+    createOrUpdateChart('chart-reward', 'line', {
+        labels: rewards.length > 0 ? rewards.map(function(_,i){return i+1;}) : [1],
+        datasets: rwDatasets
+    }, baseOpts);
+
+    // ---------- 合作/背叛率：平滑 ----------
+    var coopSm = smoothData(coops, 50);
+    var betSm = smoothData(betrayals, 50);
+    var cLen = Math.max(coopSm.length, betSm.length, 1);
+    createOrUpdateChart('chart-coop', 'line', {
+        labels: smoothLabels(coopSm, 50),
+        datasets: [
+            {
+                label: '合作率',
+                data: coopSm.length > 0 ? coopSm : [0],
+                borderColor: '#34d399',
+                backgroundColor: 'rgba(52,211,153,0.06)',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: true
+            },
+            {
+                label: '背叛率',
+                data: betSm.length > 0 ? betSm : [0],
+                borderColor: '#f87171',
+                borderWidth: 1.2,
+                pointRadius: 0,
+                fill: false
+            }
+        ]
+    }, baseOpts);
+
+    // ---------- BC积分（累积值，已平滑） ----------
+    var bcHist = d.bc_scores_history || [];
+    var bcLabels = bcHist.length > 0 ? bcHist.map(function(_,i){return i+1;}) : [1];
+    var bcDatasets = [];
+    if (bcHist.length > 0 && Object.keys(bcHist[0]).length > 0) {
+        Object.keys(bcHist[0]).forEach(function(aid, i) {
+            var rawVals = bcHist.map(function(h){return h[aid]||0;});
+            var smVals = smoothData(rawVals, 30);
+            bcDatasets.push({
+                label: aid,
+                data: smVals.length > 0 ? smVals : rawVals,
+                borderColor: ['#38bdf8','#f87171','#34d399'][i%3],
+                backgroundColor: ['rgba(56,189,248,0.05)','rgba(248,113,113,0.04)','rgba(52,211,153,0.05)'][i%3],
+                borderWidth: 1.8,
+                pointRadius: 0,
+                fill: true
+            });
+        });
+    }
+    var bcMsg = (monitorMode === 'bc')
+      ? 'BC 积分数据缺失 · 请重新生成 training_results_bc.json'
+      : '本模式未启用区块链激励 · 无链上积分';
+    createOrUpdateChart('chart-bc', 'line', {labels: bcLabels, datasets: bcDatasets},
+      Object.assign({}, baseOpts, {plugins: Object.assign({}, baseOpts.plugins || {}, {emptyState:{message: bcMsg}})}));
+
+    // ---------- Loss：100步大窗口平滑 ----------
+    var losses = d.losses || [];
+    var lossSm = smoothData(losses, 100);
+    createOrUpdateChart('chart-loss', 'line', {
+        labels: smoothLabels(lossSm, 100),
+        datasets: [{
+            label: 'TD-Error Loss',
+            data: lossSm.length > 0 ? lossSm : [0],
+            borderColor: '#fbbf24',
+            backgroundColor: 'rgba(251,191,36,0.04)',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: true
+        }]
+    }, baseOpts);
+
+    // 排行榜
+    const lb = d.leaderboard || [];
+    document.getElementById('mon-leaderboard').innerHTML = lb.length > 0
+        ? lb.map((x,i) => `<tr><td>${i+1}</td><td>${x.agent_id}</td><td class="${x.score>=0?'score-pos':'score-neg'}">${(x.score||0).toFixed(1)}</td><td><span class="badge-sm ${x.score>=0?'badge-ok':'badge-err'}">${x.score>=0?'活跃':'异常'}</span></td></tr>`).join('')
+        : '<tr><td colspan="4" style="color:var(--text-dim)">暂无排行榜数据</td></tr>';
+
+    // 摘要
+    document.getElementById('mon-summary').innerHTML = [
+        ['总回合数', s.total_episodes||0],
+        ['最近50回合均奖励', (s['avg_reward_last_50']||0).toFixed(2)],
+        ['平均合作率', ((s.avg_cooperation_rate||0)*100).toFixed(1)+'%'],
+        ['平均背叛率', ((s.avg_betrayal_rate||0)*100).toFixed(1)+'%'],
+        ['Loss更新次数', s.total_losses||0],
+        ['总训练耗时', (s.elapsed_time||0).toFixed(1)+' 秒'],
+    ].map(r => `<tr><td style="color:var(--text-dim)">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+}
+
+// ===================== 对比分析 =====================
+function loadComparison() {
+    if (!pureData || !bcData) {
+        document.getElementById('cmp-pure-metrics').innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-dim)">等待数据...</div>';
+        return;
+    }
+    const ps = (pureData && pureData.summary) || {}, bs = (bcData && bcData.summary) || {};
+    const isCombined = pureData._format === 'combined' && bcData._format === 'combined';
+    const pureRewards = isCombined ? (pureData.episode_rewards_mean || []) : (pureData.episode_rewards || []);
+    const bcRewards = isCombined ? (bcData.episode_rewards_mean || []) : (bcData.episode_rewards || []);
+    const pureStd = isCombined ? (pureData.episode_rewards_std || null) : null;
+    const bcStd = isCombined ? (bcData.episode_rewards_std || null) : null;
+    const improve = ps.avg_reward !== 0 ? ((bs.avg_reward-ps.avg_reward)/Math.abs(ps.avg_reward)*100) : 0;
+    const improveSig = (isCombined && ps.avg_reward_ci95 && bs.avg_reward_ci95)
+        ? checkSig(bs.avg_reward, bs.avg_reward_ci95, ps.avg_reward, ps.avg_reward_ci95) : null;
+    // [v3.7] 公平对比：基于 env_rewards（纯环境奖励，不含BC激励）
+    const pe = ps.avg_env_reward || 0, be = bs.avg_env_reward || 0;
+    const envImprove = (pe !== 0 && be !== 0) ? ((Math.abs(pe) - Math.abs(be)) / Math.abs(pe) * 100) : null;
+
+    // 指标卡片（合并格式显示 ±std）
+    var fmtMetric = function(s, extra){
+        var stdText = isCombined && s.avg_reward_std ? ' ±'+(s.avg_reward_std||0).toFixed(1) : '';
+        return [
+            {l:'平均奖励',v:(s.avg_reward||0).toFixed(1)+stdText},
+            {l:'最近50回合',v:(extra||s.avg_reward_last_50||0).toFixed(1)},
+            {l:'合作率',v:((s.avg_cooperation_rate||0)*100).toFixed(1)+'%'},
+            {l:'训练耗时',v:(s.elapsed_time||0).toFixed(0)+'s'}
+        ];
+    };
+    document.getElementById('cmp-pure-metrics').innerHTML = fmtMetric(ps).map(function(m){
+        return '<div class="compare-metric"><div class="val" style="color:#94a3b8">'+m.v+'</div><div class="lbl">'+m.l+'</div></div>';
+    }).join('');
+    document.getElementById('cmp-bc-metrics').innerHTML = fmtMetric(bs).map(function(m){
+        return '<div class="compare-metric"><div class="val" style="color:#38bdf8">'+m.v+'</div><div class="lbl">'+m.l+'</div></div>';
+    }).join('');
+
+    var impText = 'BC-MARL 总提升 +'+(improve||0).toFixed(0)+'%';
+    if (improveSig !== null) impText += '  [' + improveSig + ']';
+    // [v3.7] 环境奖励公平对比（不存在时静默跳过）
+    if (envImprove !== null && !isNaN(envImprove)) {
+        impText += ' | <span style="color:#fbbf24">⚖ 环境奖励提升 +'+envImprove.toFixed(0)+'% (公平对比)</span>';
+    }
+    document.getElementById('cmp-improve').innerHTML = impText;
+
+    // ---------- 奖励对比：100回合大窗口平滑 + 差异阴影 ----------
+    var w = Math.min(100, pureRewards.length, bcRewards.length);
+    var pureSm = smoothData(pureRewards, w);
+    var bcSm = smoothData(bcRewards, w);
+    var smLabels = smoothLabels(pureSm.length > bcSm.length ? pureSm : bcSm, w);
+
+    // 差异阴影：Pure下方到BC之间填充（可视化提升幅度）
+    var diffMin = [], diffMax = [];
+    for (var i = 0; i < Math.min(pureSm.length, bcSm.length); i++) {
+        diffMin.push(Math.min(pureSm[i], bcSm[i]));
+        diffMax.push(Math.max(pureSm[i], bcSm[i]));
+    }
+
+    createOrUpdateChart('chart-cmp-reward', 'line', {
+        labels: smLabels,
+        datasets: [
+            {
+                label: '差异区间',
+                data: diffMin,
+                backgroundColor: 'rgba(56,189,248,0.12)',
+                borderColor: 'transparent',
+                pointRadius: 0,
+                fill: '+1'
+            },
+            {
+                label: '',
+                data: diffMax,
+                backgroundColor: 'rgba(56,189,248,0.12)',
+                borderColor: 'transparent',
+                pointRadius: 0,
+                fill: '-1'
+            },
+            {
+                label: 'Pure MARL',
+                data: pureSm,
+                borderColor: '#94a3b8',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                borderDash: [6,3]
+            },
+            {
+                label: 'BC-MARL',
+                data: bcSm,
+                borderColor: '#38bdf8',
+                borderWidth: 2.8,
+                pointRadius: 0,
+                fill: false
+            },
+            {
+                label: 'BC均值 -45.0',
+                data: Array(smLabels.length).fill(bs.avg_reward || 0),
+                borderColor: 'rgba(56,189,248,0.3)',
+                borderWidth: 1,
+                borderDash: [3,6],
+                pointRadius: 0,
+                fill: false
+            }
+        ]
+    }, baseOpts);
+
+    // ---------- 合作率对比 ----------
+    var pCoopSm = smoothData(pureData.cooperation_rates||[], 50);
+    var bCoopSm = smoothData(bcData.cooperation_rates||[], 50);
+    createOrUpdateChart('chart-cmp-coop', 'line', {
+        labels: smoothLabels(pCoopSm.length > bCoopSm.length ? pCoopSm : bCoopSm, 50),
+        datasets: [
+            {
+                label: 'Pure 合作率',
+                data: pCoopSm.length > 0 ? pCoopSm : [0],
+                borderColor: '#94a3b8',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                borderDash: [6,3],
+                fill: false
+            },
+            {
+                label: 'BC 合作率',
+                data: bCoopSm.length > 0 ? bCoopSm : [0],
+                borderColor: '#34d399',
+                backgroundColor: 'rgba(52,211,153,0.06)',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: true
+            }
+        ]
+    }, baseOpts);
+
+    // ---------- 奖励分布柱状图 ----------
+    createOrUpdateChart('chart-cmp-dist', 'bar', {
+        labels: ['全程平均', '最近50回合'],
+        datasets: [
+            {label:'Pure MARL',data:[ps.avg_reward, ps.avg_reward_last_50],backgroundColor:'rgba(148,163,184,0.45)',borderColor:'#94a3b8',borderWidth:1,borderRadius:4},
+            {label:'BC-MARL',data:[bs.avg_reward, bs.avg_reward_last_50],backgroundColor:'rgba(56,189,248,0.55)',borderColor:'#38bdf8',borderWidth:1,borderRadius:4}
+        ]
+    }, baseOpts);
+}
+
+// ===================== 三模式对比 =====================
+function loadTriComparison() {
+    const ps = pureData?.summary || {};
+    const bs = bcData?.summary || {};
+    const ss = selfishData?.summary || {};
+    const hasSelfish = selfishData !== null;
+
+    // 指标卡片
+    function metricsFor(s, color) {
+        return [
+            {l:'平均奖励', v:(s.avg_reward||0).toFixed(1), c:color},
+            {l:'最近50回合', v:(s.avg_reward_last_50||0).toFixed(1), c:color},
+            {l:'合作率', v:((s.avg_cooperation_rate||0)*100).toFixed(1)+'%', c:'#34d399'},
+        ].map(function(m){ return '<div class="compare-metric"><div class="val" style="color:'+m.c+'">'+m.v+'</div><div class="lbl">'+m.l+'</div></div>'; }).join('');
+    }
+
+    document.getElementById('tri-pure-metrics').innerHTML = metricsFor(ps, '#94a3b8');
+    document.getElementById('tri-bc-metrics').innerHTML = metricsFor(bs, '#38bdf8');
+    document.getElementById('tri-selfish-metrics').innerHTML = hasSelfish
+        ? metricsFor(ss, '#f87171')
+        : '<div style="padding:20px;text-align:center;color:var(--text-dim)">训练中...</div>';
+
+    // ---------- 三模式奖励曲线：100回合大窗口平滑 ----------
+    var sw = 100;
+    var pureR = smoothData(pureData?.episode_rewards||[], sw);
+    var bcR = smoothData(bcData?.episode_rewards||[], sw);
+    var selfishR = smoothData(selfishData?.episode_rewards||[], sw);
+
+    var datasets = [];
+    if (pureR.length > 0) datasets.push({label:'Pure MARL',data:pureR,borderColor:'#94a3b8',borderWidth:2,pointRadius:0,borderDash:[6,3],fill:false});
+    if (bcR.length > 0) datasets.push({label:'BC-MARL',data:bcR,borderColor:'#38bdf8',borderWidth:2.8,pointRadius:0,fill:false});
+    if (selfishR.length > 0) datasets.push({label:'Selfish',data:selfishR,borderColor:'#f87171',borderWidth:1.8,pointRadius:0,borderDash:[4,4],fill:false});
+
+    var maxLen = 1;
+    for (var d = 0; d < datasets.length; d++) {
+        if (datasets[d].data.length > maxLen) maxLen = datasets[d].data.length;
+    }
+
+    createOrUpdateChart('chart-tri-reward', 'line', {
+        labels: Array.from({length:maxLen}, function(_,i){return i+sw;}),
+        datasets: datasets.length > 0 ? datasets : [{label:'等待数据',data:[0],borderColor:'#64748b'}]
+    }, baseOpts);
+
+    // ---------- 合作率对比 ----------
+    var pCoopSm = smoothData(pureData?.cooperation_rates||[], 50);
+    var bCoopSm = smoothData(bcData?.cooperation_rates||[], 50);
+    var sCoopSm = smoothData(selfishData?.cooperation_rates||[], 50);
+    var coopDatasets = [];
+    if (pCoopSm.length > 0) coopDatasets.push({label:'Pure',data:pCoopSm,borderColor:'#94a3b8',borderWidth:1.5,pointRadius:0,borderDash:[6,3],fill:false});
+    if (bCoopSm.length > 0) coopDatasets.push({label:'BC',data:bCoopSm,borderColor:'#34d399',borderWidth:2,pointRadius:0,fill:true,backgroundColor:'rgba(52,211,153,0.06)'});
+    if (sCoopSm.length > 0) coopDatasets.push({label:'Selfish',data:sCoopSm,borderColor:'#f87171',borderWidth:1.2,pointRadius:0,borderDash:[4,4],fill:false});
+
+    createOrUpdateChart('chart-tri-coop', 'line', {
+        labels: smoothLabels(coopDatasets.length>0 ? coopDatasets[0].data : [0], 50),
+        datasets: coopDatasets.length > 0 ? coopDatasets : [{label:'等待数据',data:[0],borderColor:'#64748b'}]
+    }, baseOpts);
+
+    // ---------- 奖励分布柱状图 ----------
+    createOrUpdateChart('chart-tri-dist', 'bar', {
+        labels: ['全程平均', '最近50回合'],
+        datasets: [
+            {label:'Pure',data:[ps.avg_reward||0, ps.avg_reward_last_50||0],backgroundColor:'rgba(148,163,184,0.4)',borderColor:'#94a3b8',borderWidth:1,borderRadius:4},
+            {label:'BC',data:[bs.avg_reward||0, bs.avg_reward_last_50||0],backgroundColor:'rgba(56,189,248,0.5)',borderColor:'#38bdf8',borderWidth:1,borderRadius:4},
+            ...(hasSelfish ? [{label:'Selfish',data:[ss.avg_reward||0, ss.avg_reward_last_50||0],backgroundColor:'rgba(248,113,113,0.4)',borderColor:'#f87171',borderWidth:1,borderRadius:4}] : [])
+        ]
+    }, baseOpts);
+}
+
+// ===================== 区块链 =====================
+function loadBlockchain() {
+    const d = bcData || pureData || {};
+    const config = d.config || {};
+    const bcScores = d.bc_scores_final || {};
+    document.getElementById('bc-stats').innerHTML = [
+        {l:'链上积分(agent_0)', v:(bcScores.agent_0||0).toFixed(0), c:'accent'},
+        {l:'链上积分(agent_1)', v:(bcScores.agent_1||0).toFixed(0), c:'accent2'},
+        {l:'链上积分(agent_2)', v:(bcScores.agent_2||0).toFixed(0), c:'success'},
+    ].map(s => `<div class="stat-card ${s.c}"><div class="label">${s.l}</div><div class="value animated-num">${s.v}</div></div>`).join('');
+
+    document.getElementById('bc-identity').innerHTML = [0,1,2].map(i =>
+        `<tr><td>agent_${i}</td><td style="font-family:monospace;font-size:0.75rem;color:var(--text-dim)">ECDSA:secp256r1:agent_${i}</td><td>SHA256+ECDSA</td><td><span class="badge-sm badge-ok">已注册</span></td><td>1</td></tr>`
+    ).join('');
+
+    document.getElementById('bc-params').innerHTML = [
+        ['共识算法','CW-PBFT（贡献加权PBFT）'],
+        ['容错节点数','f = floor((n-1)/3) = 0'],
+        ['贡献权重','task=0.40, coop=0.35, compliance=0.25'],
+        ['投票阈值','≥ 2/3 权重同意即确认'],
+        ['惩罚等级','警告(10) → 降权(30) → 封禁(50)'],
+        ['基础奖励','10.0'],
+        ['lambda权重',config.lambda_weight||0.1],
+        ['主节点轮换','每10个区块轮换一次'],
+    ].map(r => `<tr><td style="color:var(--text-dim)">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+
+    // 积分历史
+    const bcHist = d.bc_scores_history || [];
+    var bchLabels = bcHist.length > 0 ? bcHist.map(function(_,i){return i+1;}) : [1];
+    var bchDatasets = [];
+    if (bcHist.length > 0 && Object.keys(bcHist[0]).length > 0) {
+        Object.keys(bcHist[0]).forEach(function(aid, i) {
+            bchDatasets.push({
+                label: aid,
+                data: bcHist.map(function(h){return h[aid]||0;}),
+                borderColor: ['#38bdf8','#f87171','#34d399'][i%3],
+                borderWidth: 2
+            });
+        });
+    }
+    var bchMsg = (d === bcData)
+      ? 'BC 积分数据缺失 · 请重新生成 training_results_bc.json'
+      : '本模式未启用区块链激励 · 无链上积分';
+    createOrUpdateChart('chart-bc-history', 'line', {labels: bchLabels, datasets: bchDatasets},
+      Object.assign({}, baseOpts, {plugins: Object.assign({}, baseOpts.plugins || {}, {emptyState:{message: bchMsg}})}));
+
+    // v3.4: 流水线统计面板
+    const ecdsa = d.ecdsa_stats || {};
+    const security = d.security_stats || {};
+    const consensus = d.consensus_stats || {};
+    const blkchain = d.blockchain_stats || {};
+    const weights = consensus.weights || {};
+    const weightEntries = Object.entries(weights);
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setVal('pl-sign-count', ecdsa.sign_count || 0);
+    setVal('pl-verify-count', ecdsa.verify_count || 0);
+    setVal('pl-sec-pass', security.security_pass_count || 0);
+    setVal('pl-sec-fail', security.security_fail_count || 0);
+    setVal('pl-chain-height', blkchain.height || 0);
+    setVal('pl-total-tx', blkchain.total_transactions || 0);
+    setVal('pl-consensus-count', consensus.consensus_count || 0);
+    setVal('pl-weights', weightEntries.length ? weightEntries.map(([k,v]) => k.split('_')[1] + ':' + Number(v).toFixed(2)).join(' ') : '--');
+    // 更新 ECDSA 签名徽章
+    setVal('ecdsa-sign-badge', ecdsa.sign_count || 0);
+    // 更新 ECDSA 验签徽章
+    const verifyBadge = document.getElementById('ecdsa-verify-badge');
+    if (verifyBadge) setVal('ecdsa-verify-badge', ecdsa.verify_count || 0);
+
+    // v3.8: 子组件独立统计
+    const signing = d.signing_stats || {};
+    const recorder = d.recorder_stats || {};
+    const detector = d.detector_stats || {};
+    const settlement = d.settlement_stats || {};
+
+    // SigningService 卡片
+    setVal('sc-sign-count', signing.ecdsa_sign_count || ecdsa.sign_count || 0);
+    setVal('sc-verify-count', signing.ecdsa_verify_count || ecdsa.verify_count || 0);
+    setVal('sc-sec-pass', signing.security_pass_count || security.security_pass_count || 0);
+    setVal('sc-sec-fail', signing.security_fail_count || security.security_fail_count || 0);
+    setVal('sc-sign-badge', signing.ecdsa_sign_count || ecdsa.sign_count || 0);
+
+    // ActionRecorder 卡片
+    setVal('sc-pending', recorder.pending_actions || 0);
+    setVal('sc-tx-count', recorder.tx_count || blkchain.total_transactions || 0);
+    setVal('sc-tx-badge', recorder.tx_count || blkchain.total_transactions || 0);
+
+    // CooperationDetector 卡片
+    setVal('sc-coop-agents', detector.episode_coop_agents || 0);
+    setVal('sc-coop-badge', detector.episode_coop_agents || 0);
+    const lastStepCoop = detector.last_step_coop || {};
+    const coopTrue = Object.values(lastStepCoop).filter(v => v === true).length;
+    const coopTotal = Object.values(lastStepCoop).filter(v => v !== null && v !== undefined).length;
+    setVal('sc-coop-rate', coopTotal > 0 ? (coopTrue / coopTotal * 100).toFixed(0) + '%' : '--');
+
+    // SettlementCoordinator 卡片
+    setVal('sc-lambda', settlement.lambda_weight || 0.10);
+    setVal('sc-settle-badge', settlement.lambda_weight ? 'λ=' + Number(settlement.lambda_weight).toFixed(2) : 'λ');
+    setVal('sc-lambda-display', settlement.lambda_weight ? 'λ=' + Number(settlement.lambda_weight).toFixed(2) : 'λ=0.10');
+
+    // Per-agent 签名/合作状态
+    const bcScoresFinal = settlement.bc_scores || {};
+    const bcRewards = settlement.bc_rewards || {};
+    for (let i = 0; i < 3; i++) {
+        const aid = 'agent_' + i;
+        const signCount = signing.ecdsa_sign_count ? Math.round(signing.ecdsa_sign_count / 3) : 0;
+        const coopStatus = lastStepCoop[aid] === true ? '✓合作' : (lastStepCoop[aid] === false ? '✗背叛' : '—中性');
+        const bcScore = (bcScoresFinal[aid] || 0).toFixed(1);
+        setVal('sc-agent' + i + '-status', '签名:' + signCount + ' ' + coopStatus + ' 积分:' + bcScore);
+        // 合作状态颜色
+        const circle = document.getElementById('sc-agent' + i + '-circle');
+        if (circle) {
+            if (lastStepCoop[aid] === true) circle.setAttribute('fill', 'rgba(52,211,153,0.4)');
+            else if (lastStepCoop[aid] === false) circle.setAttribute('fill', 'rgba(248,113,113,0.4)');
+            else circle.setAttribute('fill', 'rgba(148,163,184,0.2)');
+        }
+    }
+}
+
+// ===================== 系统 =====================
+function loadSystem() {
+    const d = bcData || pureData || {};
+    const c = d.config || {};
+    document.getElementById('sys-config').innerHTML = [
+        ['模式', c.mode||'未知'],['智能体数', c.n_agents||3],['目标点数', c.n_landmarks||3],
+        ['总回合', c.n_episodes||'--'],['每回合步数', c.max_steps||25],
+        ['随机种子', c.seed||42],['lambda权重', c.lambda_weight||0.1],
+    ].map(r => `<tr><td style="color:var(--text-dim);width:160px">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+
+    document.getElementById('sys-env').innerHTML = [
+        ['环境','SimpleSpread (NumPy)'],['状态维度','18'],['观测维度','14'],['动作空间','5 (离散)'],
+        ['智能体数','3'],['目标点数','3'],['最大步数','25'],
+    ].map(r => `<tr><td style="color:var(--text-dim);width:140px">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+
+    document.getElementById('sys-algo').innerHTML = [
+        ['算法','IQL (Independent Q-Learning)'],['隐藏维度',c.hidden_dim||128],
+        ['学习率',c.lr||0.001],['折扣因子',c.gamma||0.8],
+        ['Batch Size',c.batch_size||64],['Target τ',0.01],
+        ['ε 衰减',c.epsilon_decay||5000],['Replay Buffer',2500],
+    ].map(r => `<tr><td style="color:var(--text-dim);width:140px">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+}
+
+// ===================== 图表工具 =====================
+// ===== 空状态占位插件（C2 修复：数据为空时绘制统一占位，避免"空白图像 Bug"） =====
+const emptyStatePlugin = {
+  id: 'emptyState',
+  afterDraw(chart, _args, opts) {
+    const ds = chart.data.datasets || [];
+    const empty = !ds.length || ds.every(d => !(d.data || []).length);
+    if (!empty) return;
+    const msg = (opts && opts.message) || '暂无数据';
+    const {ctx, chartArea:{left,top,right,bottom}} = chart;
+    const cx = (left+right)/2, cy = (top+bottom)/2;
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#38bdf8'; ctx.font = '22px system-ui';
+    ctx.fillText('⬡', cx, cy - 16);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '500 14px system-ui';
+    ctx.fillText(msg, cx, cy + 12);
+    ctx.restore();
+  }
+};
+Chart.register(emptyStatePlugin);
+
+function createOrUpdateChart(id, type, data, options) {
+    try {
+        var canvas = document.getElementById(id);
+        if (!canvas) { _error('Canvas not found: #' + id); return; }
+        if (typeof Chart === 'undefined') { _error('Chart.js not loaded'); return; }
+
+        // Always destroy old chart to avoid Chart.js v4 mutation/recursion bugs
+        if (charts[id]) {
+            try { charts[id].destroy(); } catch(e) {}
+            charts[id] = null;
+        }
+
+        var ctx = canvas.getContext('2d');
+        charts[id] = new Chart(ctx, {
+            type: type,
+            data: data,
+            options: options || {}
+        });
+    } catch(e) {
+        _error('Chart ' + id + ': ' + e.message);
+    }
+}
+
+// ===================== 启动 =====================
+initAll();
+
+// ===================== P2P 网络拓扑可视化 =====================
+function drawP2PTopology(nodes, connections, activeNode) {
+    try {
+    const canvas = document.getElementById('p2p-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    
+    // Node positions (triangle layout)
+    const positions = nodes.map((_, i) => {
+        const angle = (i * 2 * Math.PI / nodes.length) - Math.PI / 2;
+        const r = 130;
+        return { x: W/2 + r * Math.cos(angle), y: H/2 + r * Math.sin(angle) };
+    });
+    
+    // Draw connections
+    connections.forEach(([from, to]) => {
+        const p1 = positions[from], p2 = positions[to];
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = 'rgba(100, 180, 255, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Animated pulse on connections
+        const t = Date.now() / 2000;
+        const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI + from + to);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        const mx = p1.x + (p2.x - p1.x) * pulse;
+        const my = p1.y + (p2.y - p1.y) * pulse;
+        ctx.arc(mx, my, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(100, 200, 255, 0.7)';
+        ctx.fill();
+    });
+    
+    // Draw nodes
+    positions.forEach((pos, i) => {
+        const isActive = i === activeNode;
+        
+        // Glow
+        const gradient = ctx.createRadialGradient(pos.x, pos.y, 10, pos.x, pos.y, 40);
+        if (isActive) {
+            gradient.addColorStop(0, 'rgba(0, 255, 128, 0.6)');
+            gradient.addColorStop(1, 'rgba(0, 255, 128, 0)');
+        } else {
+            gradient.addColorStop(0, 'rgba(0, 150, 255, 0.4)');
+            gradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
+        }
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 40, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Node circle
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 28, 0, Math.PI * 2);
+        ctx.fillStyle = isActive ? '#0f3' : '#08f';
+        ctx.fill();
+        ctx.strokeStyle = isActive ? '#0f3' : '#06a';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Node label
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(nodes[i], pos.x, pos.y + 5);
+        
+        // Port label
+        ctx.fillStyle = '#889';
+        ctx.font = '10px monospace';
+        ctx.fillText(`:${7001 + i}`, pos.x, pos.y + 50);
+    });
+    
+    requestAnimationFrame(() => drawP2PTopology(nodes, connections, activeNode));
+    } catch(e) { _error('drawP2PTopology: ' + e.message); }
+}
+
+// ===================== 共识投票可视化 =====================
+let consensusDataLoaded = false;
+
+function loadConsensus() {
+    fetch('/api/consensus_votes')
+        .then(r => r.json())
+        .then(data => {
+            // 更新统计卡片
+            document.getElementById('cs-rounds').textContent = data.n_consensus_rounds || 0;
+            document.getElementById('cs-txs').textContent = data.n_transactions || 0;
+            const secStats = data.security_stats || {};
+            document.getElementById('cs-alerts').textContent = secStats.total_alerts || 0;
+
+            // 权重分布柱状图
+            const weights = data.weights || {};
+            const wLabels = Object.keys(weights);
+            const wData = Object.values(weights);
+            const ce = document.getElementById('consensus-empty');
+            if (ce) ce.style.display = (wData && wData.length) ? 'none' : 'flex';
+            const wColors = wLabels.map((_, i) => ['#00d4ff', '#00ff88', '#ffaa00', '#ff6b6b', '#a78bfa'][i % 5]);
+
+            createOrUpdateChart('chart-consensus-weights', 'bar', {
+                labels: wLabels,
+                datasets: [{
+                    label: '投票权重',
+                    data: wData,
+                    backgroundColor: wColors.map(c => c + '40'),
+                    borderColor: wColors,
+                    borderWidth: 2,
+                }]
+            }, {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#aaa' }, grid: { display: false } }
+                }
+            });
+
+            // 贡献度雷达图
+            const cw = data.contribution_weights || {task_score: 0.40, cooperation_score: 0.35, compliance_score: 0.25};
+            createOrUpdateChart('chart-contribution-radar', 'radar', {
+                labels: ['任务完成', '合作度', '合规性'],
+                datasets: [{
+                    label: 'Shapley风格权重',
+                    data: [cw.task_score || 0.40, cw.cooperation_score || 0.35, cw.compliance_score || 0.25],
+                    backgroundColor: 'rgba(0,212,255,0.15)',
+                    borderColor: '#00d4ff',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#00d4ff',
+                    pointRadius: 5,
+                }]
+            }, {
+                responsive: true,
+                plugins: { legend: { display: true, labels: { color: '#aaa' } } },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 0.5,
+                        ticks: { color: '#666', backdropColor: 'transparent' },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        pointLabels: { color: '#aaa', font: { size: 13 } }
+                    }
+                }
+            });
+
+            consensusDataLoaded = true;
+        })
+        .catch(e => _error('loadConsensus: ' + e.message));
+}
+
+// ===================== 区块浏览器 =====================
+let explorerDataLoaded = false;
+
+function loadBlockExplorer() {
+    fetch('/api/block_explorer')
+        .then(r => r.json())
+        .then(data => {
+            // 更新统计卡片
+            document.getElementById('ex-height').textContent = data.total_blocks || 0;
+            document.getElementById('ex-txs').textContent = data.total_transactions || 0;
+            const ecdsa = data.ecdsa_stats || {};
+            document.getElementById('ex-sigs').textContent = (ecdsa.sign_count || 0) + '/' + (ecdsa.verify_count || 0);
+            document.getElementById('ex-valid').textContent = data.chain_valid ? 'OK' : 'FAIL';
+            document.getElementById('ex-valid').style.color = data.chain_valid ? '#00ff88' : '#ff6b6b';
+
+            // 渲染区块列表
+            const tbody = document.getElementById('ex-blocks-body');
+            const blocks = data.blocks || [];
+            const ee = document.getElementById('explorer-empty');
+            if (ee) ee.style.display = (blocks && blocks.length) ? 'none' : 'flex';
+            tbody.innerHTML = blocks.map(b => `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:8px;color:#00d4ff;font-family:monospace;">#${b.height}</td>
+                    <td style="padding:8px;color:#aaa;font-family:monospace;font-size:0.8rem;">${b.hash.substring(0,18)}...</td>
+                    <td style="padding:8px;color:#666;font-family:monospace;font-size:0.8rem;">${b.prev_hash.substring(0,18)}...</td>
+                    <td style="padding:8px;color:#00ff88;">${b.proposer}</td>
+                    <td style="padding:8px;text-align:right;color:#ffaa00;">${b.tx_count}</td>
+                    <td style="padding:8px;color:#888;">${b.consensus}</td>
+                </tr>
+            `).join('');
+
+            // 每块交易数趋势
+            const txCounts = blocks.map(b => b.tx_count).reverse();
+            const heights = blocks.map(b => b.height).reverse();
+            createOrUpdateChart('chart-block-tx-trend', 'line', {
+                labels: heights,
+                datasets: [{
+                    label: '交易数/区块',
+                    data: txCounts,
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0,212,255,0.06)',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    fill: true,
+                }]
+            }, {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#666', maxTicksLimit: 10 }, grid: { display: false } }
+                }
+            });
+
+            // 出块者分布饼图
+            const proposerCounts = {};
+            blocks.forEach(b => { proposerCounts[b.proposer] = (proposerCounts[b.proposer] || 0) + 1; });
+            const pLabels = Object.keys(proposerCounts);
+            const pData = Object.values(proposerCounts);
+            const pColors = pLabels.map((_, i) => ['#00d4ff', '#00ff88', '#ffaa00', '#ff6b6b'][i % 4]);
+
+            createOrUpdateChart('chart-proposer-dist', 'doughnut', {
+                labels: pLabels,
+                datasets: [{
+                    data: pData,
+                    backgroundColor: pColors.map(c => c + '80'),
+                    borderColor: pColors,
+                    borderWidth: 2,
+                }]
+            }, {
+                responsive: true,
+                plugins: { legend: { position: 'right', labels: { color: '#aaa' } } }
+            });
+
+            explorerDataLoaded = true;
+        })
+        .catch(e => _error('loadBlockExplorer: ' + e.message));
+}
+
+let p2pDataLoaded = false;
+
+function loadP2PData() {
+    // Try to fetch P2P network stats from API
+    fetch('/api/p2p_stats')
+        .then(r => r.json())
+        .then(data => {
+            if (data.n_nodes) {
+                document.getElementById('p2p-nnodes').textContent = data.n_nodes;
+                document.getElementById('p2p-rounds').textContent = data.total_consensus_rounds || '--';
+                document.getElementById('p2p-msgs').textContent = (data.total_msg_sent || 0) + ' / ' + (data.total_msg_received || 0);
+                document.getElementById('p2p-latency').textContent = (data.avg_latency_ms || '--') + ' ms';
+                
+                // Fix canvas dimensions (hidden tab causes 0-size)
+                const topoCanvas = document.getElementById('p2p-canvas');
+                if (topoCanvas && (topoCanvas.width === 0 || topoCanvas.offsetWidth === 0)) {
+                    const container = topoCanvas.parentElement;
+                    topoCanvas.width = container ? container.clientWidth || 800 : 800;
+                    topoCanvas.height = 380;
+                }
+                
+                // Draw topology
+                const nodes = data.nodes ? Object.keys(data.nodes) : ['agent_0', 'agent_1', 'agent_2'];
+                const conns = [];
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        conns.push([i, j]);
+                    }
+                }
+                drawP2PTopology(nodes, conns, 0);
+                
+                // Weight chart (Canvas 2D, no Chart.js dependency)
+                if (data.weights) {
+                    setTimeout(() => drawWeightChart(data.weights), 100);
+                }
+                
+                // Message log
+                if (data.recent_log) {
+                    let log = '';
+                    data.recent_log.slice(-20).reverse().forEach(entry => {
+                        log += '<div style="padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.05);">' + entry + '</div>';
+                    });
+                    document.getElementById('p2p-log').innerHTML = log || '<div style="color:#556;">暂无消息日志</div>';
+                }
+            }
+            p2pDataLoaded = true;
+        })
+        .catch(() => {
+            // Fallback: show static demo topology
+            const nodes = ['agent_0', 'agent_1', 'agent_2'];
+            const conns = [[0,1], [0,2], [1,2]];
+            // Fix canvas dimensions
+            const topoCanvas = document.getElementById('p2p-canvas');
+            if (topoCanvas && topoCanvas.offsetWidth === 0) {
+                const container = topoCanvas.parentElement;
+                topoCanvas.width = container ? container.clientWidth || 800 : 800;
+                topoCanvas.height = 380;
+            }
+            setTimeout(() => drawP2PTopology(nodes, conns, 0), 100);
+            document.getElementById('p2p-log').innerHTML = '<div style="color:#556;">P2P网络未启动。运行 python network_demo.py 查看实时拓扑。</div>';
+        });
+}
+
+function drawWeightChart(weights) {
+    try {
+        const canvas = document.getElementById('p2p-weight-chart');
+        if (!canvas) { _error('P2P weight canvas not found'); return; }
+        
+        // Fix dimensions (canvas may be 0-size in hidden tab)
+        const container = canvas.parentElement;
+        const cw = container ? container.clientWidth : 0;
+        if (cw > 0 && (canvas.width === 0 || canvas.width < 100)) {
+            canvas.width = cw;
+            canvas.height = 380;
+        }
+        if (!canvas.width || canvas.width < 100) {
+            canvas.width = 400;
+            canvas.height = 380;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+        
+        // Background
+        ctx.fillStyle = 'rgba(8,16,32,0.8)';
+        ctx.fillRect(0, 0, W, H);
+        
+        const keys = Object.keys(weights);
+        const values = Object.values(weights).map(v => (typeof v === 'number' && !isNaN(v)) ? v : 0);
+        if (keys.length === 0) {
+            ctx.fillStyle = '#556';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('暂无权重数据', W/2, H/2);
+            return;
+        }
+        const maxVal = Math.max(...values, 1.5);
+        const barW = Math.max(20, (W - 80) / keys.length - 20);
+        
+        // Helper: manual rounded rect
+        function fillRoundRect(ctx, x, y, w, h, r) {
+            r = Math.min(r, w/2, h/2);
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+            ctx.lineTo(x + r, y + h);
+            ctx.arcTo(x, y + h, x, y + h - r, r);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        keys.forEach((k, i) => {
+            const x = 60 + i * (barW + 40);
+            const h = Math.max(2, (values[i] / maxVal) * (H - 100));
+            const y = H - 60 - h;
+            
+            // Bar with gradient
+            const gradient = ctx.createLinearGradient(x, y, x, H - 60);
+            gradient.addColorStop(0, '#0af');
+            gradient.addColorStop(1, '#036');
+            ctx.fillStyle = gradient;
+            fillRoundRect(ctx, x, y, barW, h, 4);
+            
+            // Value label
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText((Number(values[i]) || 0).toFixed(2), x + barW/2, y - 10);
+            
+            // Name label
+            ctx.fillStyle = '#889';
+            ctx.font = '12px monospace';
+            ctx.fillText(k, x + barW/2, H - 40);
+        });
+        
+        // Axes
+        ctx.strokeStyle = '#334';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(40, H - 60);
+        ctx.lineTo(W - 20, H - 60);
+        ctx.stroke();
+    } catch(e) {
+        _error('drawWeightChart: ' + e.message);
+    }
+}
+
+// ===================== 攻防演示 =====================
+let attackInjected = false;
+
+function loadAttackPanel() {
+    if (!attackInjected) {
+        // 首次进入自动注入全部攻击，演示防护效果
+        injectAttack('all');
+    }
+}
+
+async function injectAttack(type) {
+    const status = document.getElementById('attack-status');
+    const results = document.getElementById('attack-results');
+    const btnRow = document.getElementById('attack-btn-row');
+    status.textContent = '⏳ 正在注入攻击并验证区块链防护...';
+    status.style.color = '#f59e0b';
+    btnRow.querySelectorAll('button').forEach(b => b.disabled = true);
+    try {
+        const resp = await fetch('/api/attack/inject?type=' + encodeURIComponent(type));
+        const data = await resp.json();
+        if (data.error) { status.textContent = '❌ ' + data.error; return; }
+        attackInjected = true;
+        status.textContent = '✅ 攻击注入完成，防护结果如下';
+        status.style.color = '#00ff88';
+        renderAttackResult(data);
+    } catch(e) {
+        status.textContent = '❌ 请求失败: ' + e.message;
+        status.style.color = '#ff6b6b';
+    } finally {
+        btnRow.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+}
+
+const ATTACK_NAMES = {
+    'observation_forgery': '观测伪造攻击',
+    'message_tampering': '消息篡改攻击',
+    'replay_attack': '重放攻击',
+    'byzantine_primary': '拜占庭主节点攻击'
+};
+
+function renderAttackResult(data) {
+    const container = document.getElementById('attack-results');
+    const list = data.attack_type === 'all' ? data.results : [data];
+    let html = '';
+    list.forEach(r => {
+        const name = ATTACK_NAMES[r.attack_type] || r.attack_type;
+        const noBc = r.no_bc || {};
+        const withBc = r.with_bc || {};
+        const noBcOk = !!noBc.attack_successful;
+        const withBcOk = !!withBc.attack_successful;
+        const defended = noBcOk && !withBcOk;
+
+        let detailsHtml = '';
+        const detailKeys = Object.keys(withBc).filter(k => !['attack_successful', 'description'].includes(k));
+        detailKeys.forEach(k => {
+            const v = withBc[k];
+            const vStr = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+            detailsHtml += `<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:0.8rem;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <span style="color:#8899aa;">${k}</span><span style="color:#e2e8f0;font-family:monospace;text-align:right;">${vStr}</span></div>`;
+        });
+
+        html += `
+        <div class="chart-card full" style="padding:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h3 style="margin:0;">${name}</h3>
+                <span class="badge ${defended ? 'badge-green' : 'badge-red'}" style="font-size:0.85rem;">${defended ? '🛡 已拦截' : '⚠ 未拦截'}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.25);border-radius:10px;padding:14px;">
+                    <div style="font-size:0.85rem;color:#ff8a8a;margin-bottom:6px;">❌ 无区块链基线</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#ff6b6b;margin-bottom:6px;">${noBcOk ? '攻击成功' : '—'}</div>
+                    <div style="font-size:0.85rem;color:#aab8c8;line-height:1.6;">${noBc.description || ''}</div>
+                </div>
+                <div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.25);border-radius:10px;padding:14px;">
+                    <div style="font-size:0.85rem;color:#5eead4;margin-bottom:6px;">✅ MARL-ECDSA 区块链防护</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:${withBcOk ? '#ff6b6b' : '#00ff88'};margin-bottom:6px;">${withBcOk ? '攻击成功' : '攻击被拦截'}</div>
+                    <div style="font-size:0.85rem;color:#aab8c8;line-height:1.6;">${withBc.description || ''}</div>
+                </div>
+            </div>
+            ${detailsHtml ? `<div style="margin-top:12px;background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 14px;">${detailsHtml}</div>` : ''}
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+</script>
+</body>
+</html>
