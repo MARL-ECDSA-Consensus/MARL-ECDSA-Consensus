@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # 每日定时质检：即使无新提交也自动跑全量测试（24h 无人值守持续优化）
+    - cron: '15 2 * * *'   # 每日 UTC 02:15（北京时间 10:15）
 
 jobs:
   test:
