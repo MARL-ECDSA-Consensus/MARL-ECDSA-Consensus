@@ -69,6 +69,10 @@ jobs:
     name: Append review log (audit trail)
     runs-on: ubuntu-latest
     needs: test
+    # P1-16修复: 与心跳工作流共用 repo-write 串行组，杜绝并行 push 冲突
+    concurrency:
+      group: repo-write
+      cancel-in-progress: false
     # PR 不写日志（避免给他人 fork 仓库 push）；push/schedule/manual 均记录
     if: github.event_name != 'pull_request'
     steps:
