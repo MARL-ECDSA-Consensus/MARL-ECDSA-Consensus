@@ -19,11 +19,18 @@ class CooperationDetector:
     4. reset_episode() — 重置回合内累积状态
 
     观测格式：[vel_x, vel_y, pos_x, pos_y, lm1_dx, lm1_dy, lm2_dx, lm2_dy, ...]
+
+    增量创新 #4（启发自 EquiChain ExtraTrees）：可选 ML 分类器路径。
+    - 默认规则基模式不变（完全向后兼容）
+    - 可训练 sklearn 分类器（train_classifier），并用 predict_ml 做补充判定
     """
 
     def __init__(self, n_agents: int = 3, n_landmarks: int = 3):
         self.n_agents = n_agents
         self.n_landmarks = n_landmarks
+        # 增量创新 #4: 可选 ML 分类器（默认 None = 纯规则基）
+        self._ml_clf = None
+        self._ml_available = False
 
         # 回合内合作状态累积 {agent_id: {'coop': count, 'betray': count, 'total': count}}
         self._episode_coop: Dict[str, Dict[str, int]] = {}
@@ -137,4 +144,100 @@ class CooperationDetector:
         return {
             'episode_coop_agents': len(self._episode_coop),
             'last_step_coop': dict(self._last_step_coop),
+            'ml_classifier': self._ml_clf.__class__.__name__ if self._ml_clf else None,
         }
+
+    # ----------------------------------------------------------------------
+    # 增量创新 #4: 可选 ML 分类器路径（启发自 EquiChain ExtraTrees）
+    # 默认纯规则基；调用 train_classifier 后启用 ML 补充判定
+    # ----------------------------------------------------------------------
+
+    def _extract_features(self, observations: List[Any], agent_ids: List[str]) -> Tuple[List[list], List[str]]:
+        """
+        从观测中提取分类特征（与规则基一致的分区）
+        每智能体特征：到自身目标点距离、最近目标点距离、位置坐标
+        :return: (feature_rows, agent_ids)
+        """
+        import numpy as np
+        rows = []
+        for i, obs in enumerate(observations):
+            try:
+                obs_arr = np.array(obs, dtype=float)
+                n_lm = self.n_landmarks
+                lm_rel = obs_arr[4:4 + 2 * n_lm].reshape(-1, 2)
+                own_idx = i % n_lm
+                dist_to_own = float(np.linalg.norm(lm_rel[own_idx]))
+                min_dist_any = min(
+                    float(np.linalg.norm(lm_rel[j])) for j in range(n_lm)
+                )
+                rows.append([dist_to_own, min_dist_any, float(obs_arr[2]), float(obs_arr[3])])
+            except Exception as e:
+                logger.warning(f"[CooperationDetector] 特征提取异常 {agent_ids[i] if i < len(agent_ids) else i}: {e}")
+                rows.append([0.0, 0.0, 0.0, 0.0])
+        return rows, agent_ids
+
+    def train_classifier(
+        self,
+        observations: List[Any],
+        agent_ids: List[str],
+        labels: List[int],
+        max_features: str = 'sqrt',
+    ) -> bool:
+        """
+        训练 ExtraTrees 分类器（启发自 EquiChain 98.37% 方案）
+
+        :param observations: 观测样本列表（与规则基相同格式）
+        :param agent_ids: 智能体 ID 列表（与观测对齐）
+        :param labels: 标签列表（1=合作, 0=背叛/中性）
+        :param max_features: sklearn 参数
+        :return: 是否训练成功
+        """
+        try:
+            from sklearn.ensemble import ExtraTreesClassifier
+        except ImportError:
+            logger.warning("[CooperationDetector] sklearn 未安装，ML 路径不可用（保持规则基）")
+            return False
+
+        features, _ = self._extract_features(observations, agent_ids)
+        if len(features) < 2 or len(set(labels)) < 2:
+            logger.warning("[CooperationDetector] 样本不足或标签单一，跳过 ML 训练")
+            return False
+
+        self._ml_clf = ExtraTreesClassifier(
+            n_estimators=50, max_depth=5, max_features=max_features, random_state=42
+        )
+        self._ml_clf.fit(features, labels)
+        self._ml_available = True
+        logger.info(
+            f"[CooperationDetector] ML 分类器训练完成: "
+            f"{self._ml_clf.__class__.__name__} 样本={len(features)}"
+        )
+        return True
+
+    def predict_ml(self, observations: List[Any], agent_ids: List[str]) -> Dict[str, Optional[bool]]:
+        """
+        用 ML 分类器判定合作状态（补充规则基）
+        :return: {agent_id: True(合作) / False(背叛) / None(无法判定)}
+        """
+        if not self._ml_available or self._ml_clf is None:
+            return {}
+        features, ids = self._extract_features(observations, agent_ids)
+        try:
+            preds = self._ml_clf.predict(features)
+            return {aid: bool(p) for aid, p in zip(ids, preds)}
+        except Exception as e:
+            logger.warning(f"[CooperationDetector] ML 预测异常: {e}")
+            return {}
+
+    def get_ml_accuracy(self, observations: List[Any], agent_ids: List[str], labels: List[int]) -> Optional[float]:
+        """评估 ML 分类器准确率（用于与规则基对比报告）"""
+        if not self._ml_available or self._ml_clf is None:
+            return None
+        preds = self.predict_ml(observations, agent_ids)
+        if not preds or not labels:
+            return None
+        correct = sum(
+            1 for aid, lbl in zip(agent_ids, labels)
+            if aid in preds and int(preds[aid]) == int(lbl)
+        )
+        return round(correct / max(1, len(labels)), 4)
