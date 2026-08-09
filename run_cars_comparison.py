@@ -107,7 +107,8 @@ def welch_ttest(group_a, group_b, name_a, name_b):
         "t_statistic": float(t_stat),
         "p_value": float(p_value),
         "cohens_d": float(cohens_d),
-        "significant": p_value < 0.05,
+        # P3-10修复: p_value<0.05 对 numpy 标量返回 np.bool_，json.dump 报告时无法序列化
+        "significant": bool(p_value < 0.05),
         "mean_a": float(np.mean(group_a)),
         "mean_b": float(np.mean(group_b)),
         "improvement_pct": float((np.mean(group_a) - np.mean(group_b)) / abs(np.mean(group_b)) * 100) if np.mean(group_b) != 0 else 0.0,

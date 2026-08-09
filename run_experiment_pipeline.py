@@ -123,23 +123,25 @@ def generate_report(input_files: list, output_name: str):
         "|---------|------|-----------|--------|--------|",
     ])
 
-    scale_path = ROOT / input_files[0]
-    if scale_path.exists():
-        with open(scale_path) as fh:
-            scale_data = json.load(fh)
-        for n in [3, 5]:
-            for mode in ['pure_marl', 'bc_marl']:
-                key = f"{mode}_n{n}"
-                if key in scale_data:
-                    r = scale_data[key]
-                    impr_key = f"bc_improvement_n{n}"
-                    impr = f"{scale_data[impr_key]['improvement_pct']:+.1f}%" if impr_key in scale_data else ""
-                    env = f"{r['env_reward_mean']:.1f}±{r['env_reward_std']:.1f}"
-                    coop = f"{r['coop_rate_mean']:.1%}"
-                    if mode == 'pure_marl':
-                        md_lines.append(f"| {n} | {mode} | {env} | {coop} | {impr} |")
-                    else:
-                        md_lines.append(f"| | {mode} | {env} | {coop} | |")
+    # P3-4修复: input_files 可能为空/长度不足，访问前需加保护（此前空列表 IndexError）
+    if len(input_files) > 0:
+        scale_path = ROOT / input_files[0]
+        if scale_path.exists():
+            with open(scale_path) as fh:
+                scale_data = json.load(fh)
+            for n in [3, 5]:
+                for mode in ['pure_marl', 'bc_marl']:
+                    key = f"{mode}_n{n}"
+                    if key in scale_data:
+                        r = scale_data[key]
+                        impr_key = f"bc_improvement_n{n}"
+                        impr = f"{scale_data[impr_key]['improvement_pct']:+.1f}%" if impr_key in scale_data else ""
+                        env = f"{r['env_reward_mean']:.1f}±{r['env_reward_std']:.1f}"
+                        coop = f"{r['coop_rate_mean']:.1%}"
+                        if mode == 'pure_marl':
+                            md_lines.append(f"| {n} | {mode} | {env} | {coop} | {impr} |")
+                        else:
+                            md_lines.append(f"| | {mode} | {env} | {coop} | |")
 
     md_lines.extend([
         "",
@@ -149,14 +151,15 @@ def generate_report(input_files: list, output_name: str):
         "|------|-----------|-------------|",
     ])
 
-    abl_path = ROOT / input_files[1]
-    if abl_path.exists():
-        with open(abl_path) as fh:
-            abl_data = json.load(fh)
-        baseline = abl_data.get('baseline', {}).get('mean', 0)
-        for cond, vals in abl_data.items():
-            impr = f"{(vals['mean'] - baseline) / max(0.001, abs(baseline)) * 100:+.1f}%"
-            md_lines.append(f"| {cond} | {vals['mean']:.2f}±{vals['std']:.2f} | {impr} |")
+    if len(input_files) > 1:
+        abl_path = ROOT / input_files[1]
+        if abl_path.exists():
+            with open(abl_path) as fh:
+                abl_data = json.load(fh)
+            baseline = abl_data.get('baseline', {}).get('mean', 0)
+            for cond, vals in abl_data.items():
+                impr = f"{(vals['mean'] - baseline) / max(0.001, abs(baseline)) * 100:+.1f}%"
+                md_lines.append(f"| {cond} | {vals['mean']:.2f}±{vals['std']:.2f} | {impr} |")
 
     md_lines.append("")
     md_lines.append("---")

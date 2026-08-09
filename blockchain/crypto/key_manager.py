@@ -6,6 +6,7 @@
 import os
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Optional, Dict, Tuple
 
@@ -24,6 +25,11 @@ class KeyManager:
     - 仅暴露公钥用于链上注册，私钥绝不离开本地
     """
 
+    # P3-2修复: 类级锁保护 generate_or_load 的"检查-生成-缓存"临界区。
+    # 多实例/多线程并发生成同一 agent 密钥时，若不加锁会各自 miss 缓存、
+    # 各自生成新密钥并写文件竞态（最后写入者赢），导致不同调用方拿到不同密钥。
+    _init_lock = threading.Lock()
+
     def __init__(self, key_dir: str = "./keys"):
         self.key_dir = Path(key_dir)
         self.key_dir.mkdir(parents=True, exist_ok=True)
@@ -37,7 +43,13 @@ class KeyManager:
         """
         为指定智能体生成或加载密钥对
         如果本地已有密钥文件则加载，否则生成新密钥对并保存
+        线程安全：P3-2 类级锁保证并发调用同一 agent 得到一致密钥
         """
+        with KeyManager._init_lock:
+            return self._generate_or_load_locked(agent_id)
+
+    def _generate_or_load_locked(self, agent_id: str) -> Tuple[ec.EllipticCurvePrivateKey, ec.EllipticCurvePublicKey]:
+        """加锁后的实现（供 generate_or_load 调用）"""
         if agent_id in self._key_cache:
             return self._key_cache[agent_id]
 

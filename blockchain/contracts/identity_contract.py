@@ -35,6 +35,9 @@ class IdentityContract:
         智能体注册
         校验公钥格式与唯一性
         """
+        # P3-11修复: None agent_id 拒绝注册（此前 None 会被存入 _identities 污染链上身份）
+        if agent_id is None:
+            return {'success': False, 'error': '智能体ID不能为空'}
         if public_key_hex is None:
             return {'success': False, 'error': f'公钥不能为空: {agent_id}'}
         # 格式校验：非压缩公钥应为130个十六进制字符（04 + 64字节）

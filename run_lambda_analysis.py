@@ -287,6 +287,8 @@ def generate_report(sensitivity_results, adaptive_results):
     with open(report_path, 'w', encoding='utf-8') as f:
         json.dump(report, f, indent=2, ensure_ascii=False, default=str)
     logger.info(f"\n报告已保存: {report_path}")
+    # P3-3修复: 生成报告应返回报告对象（此前只写文件返回 None，调用方无法获取结果）
+    return report
 
 
 def main():

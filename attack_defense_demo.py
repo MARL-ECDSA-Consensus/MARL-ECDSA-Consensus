@@ -346,14 +346,17 @@ def demo_replay_attack() -> Dict:
 def generate_report(results: List[Dict]):
     """生成攻击防御演示报告"""
     bc_blocked = sum(1 for r in results if not r["with_bc"]["attack_successful"])
+    # P3-8修复: 空 results 时避免除零（此前 bc_blocked / len(results) 崩溃）
+    n = len(results)
+    defense_pct = (bc_blocked / n * 100) if n > 0 else 0.0
     report = {
         "title": "区块链安全防护演示报告",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "summary": {
-            "total_attacks": len(results),
+            "total_attacks": n,
             "no_bc_success": sum(1 for r in results if r["no_bc"]["attack_successful"]),
             "with_bc_success": sum(1 for r in results if r["with_bc"]["attack_successful"]),
-            "defense_rate": f"{bc_blocked}/{len(results)} = {bc_blocked / len(results) * 100:.0f}%",
+            "defense_rate": f"{bc_blocked}/{n} = {defense_pct:.0f}%",
         },
         "attacks": results,
     }

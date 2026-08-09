@@ -27,12 +27,6 @@ import sys
 import time
 import os
 
-# fix Windows console encoding for non-ASCII output
-if sys.platform == "win32":
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-
 # add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -52,6 +46,9 @@ class SimpleFormatter(logging.Formatter):
 
 
 def setup_logging(verbose: bool = False):
+    # P3-5修复: Windows 控制台 UTF-8 编码替换已移至 main() 开头（仅脚本直接运行时）。
+    # 原实现（模块顶层/此处）会替换 sys.stdout/stderr，破坏所有导入方
+    # （如 pytest 捕获机制、train.py 等），导致"closed file"崩溃。
     level = logging.DEBUG if verbose else logging.INFO
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(SimpleFormatter())
@@ -175,6 +172,15 @@ def demo(n_nodes: int, n_rounds: int, base_port: int = 7001):
 # =============================================================================
 
 def main():
+    # P3-5修复: Windows 控制台 UTF-8 编码替换仅在脚本直接运行时执行
+    # （不污染导入方如 pytest 捕获机制 / train.py）
+    if sys.platform == "win32":
+        import io
+        try:
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        except (AttributeError, ValueError):
+            pass  # 无 buffer 或已包装时跳过
     parser = argparse.ArgumentParser(
         description="MARL-ECDSA Consensus Chain P2P Network Demo"
     )

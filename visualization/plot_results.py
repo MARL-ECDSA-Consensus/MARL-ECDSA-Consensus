@@ -181,6 +181,11 @@ def generate_all_plots(results_path: str = 'training_results.json', output_dir: 
     """一键生成所有图表"""
     Path(output_dir).mkdir(exist_ok=True)
 
+    # P3-9修复: 缺失结果文件时降级返回（此前 open 直接抛 FileNotFoundError）
+    if not os.path.exists(results_path):
+        logger.warning(f"[PlotResults] 结果文件不存在: {results_path}，跳过图表生成")
+        return None
+
     with open(results_path, 'r', encoding='utf-8') as f:
         results = json.load(f)
 

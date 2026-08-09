@@ -446,7 +446,10 @@ class P2PNode:
             for _ in range(remove_count):
                 if not self._msg_order:
                     break
-                oldest_mid = self._msg_order.popitem(last=False)[0]  # FIFO: pop 最旧
+                # P3-1修复: dict.popitem() 不接受 last 关键字参数（Python 3.7+），
+                # 改用 next(iter()) 取最旧 key 再删除（FIFO）
+                oldest_mid = next(iter(self._msg_order))
+                del self._msg_order[oldest_mid]
                 self._seen_msg_ids.discard(oldest_mid)
 
     def get_network_stats(self) -> Dict:

@@ -17,6 +17,7 @@ Usage:
     python scripts/benchmark/run_all.py --output report.json # Custom output
 """
 import argparse
+import hashlib  # P3-6: benchmark_blockchain 补 action_hash 所需
 import json
 import os
 import sys
@@ -102,10 +103,12 @@ def benchmark_blockchain(num_blocks=500, txs_per_block=30):
     for h in range(1, num_blocks + 1):
         txs = []
         for i in range(txs_per_block):
+            action = [float(i % 5)]
             tx = Transaction(
                 tx_id=f"bench_tx_{h}_{i}",
                 agent_id=f"agent_{i % 5}",
-                action=[float(i % 5)],
+                action=action,
+                action_hash=hashlib.sha256(str(action).encode()).hexdigest()[:16],  # P3-6: 补 action_hash
                 timestamp=int(time.time() * 1000),
                 nonce=h * txs_per_block + i,
                 signature_hex="bench_sig_hex",
@@ -222,6 +225,14 @@ def benchmark_security_guard(num_checks=50000):
     return results
 
 
+def _fmt_num(v):
+    """P3-7修复: 安全数值格式化——数值加千分位，'N/A' 等字符串直接返回。
+    原实现用 {v:,} 对缺省值 'N/A' 崩溃（Cannot specify ',' with 's'）。"""
+    if isinstance(v, (int, float)):
+        return f"{v:,}"
+    return str(v)
+
+
 def generate_report(all_results, output_path):
     """Generate Markdown and JSON reports."""
     # JSON report
@@ -246,8 +257,8 @@ def generate_report(all_results, output_path):
 | Operation | Time (ms) | Throughput (ops/s) |
 |-----------|:---------:|:------------------:|
 | Key Generation | {e.get('keygen_ms', 'N/A')} | — |
-| Sign (raw ECDSA) | {e.get('sign_ms', 'N/A')} | {e.get('sign_per_sec', 'N/A'):,} |
-| Verify | {e.get('verify_ms', 'N/A')} | {e.get('verify_per_sec', 'N/A'):,} |
+| Sign (raw ECDSA) | {e.get('sign_ms', 'N/A')} | {_fmt_num(e.get('sign_per_sec', 'N/A'))} |
+| Verify | {e.get('verify_ms', 'N/A')} | {_fmt_num(e.get('verify_per_sec', 'N/A'))} |
 | Full Sign Pipeline | {e.get('full_sign_pipeline_ms', 'N/A')} | — |
 
 **1000-episode total**: 3 agents × 25 steps × 1000 ep = 75,000 signatures ≈ {round(75000 * e.get('full_sign_pipeline_ms', 0) / 1000, 1)} seconds
@@ -261,7 +272,7 @@ def generate_report(all_results, output_path):
 | Transactions/sec (TPS) | **{b.get('tps', 'N/A')}** |
 | Blocks/sec (BPS) | {b.get('bps', 'N/A')} |
 | Total blocks tested | {b.get('total_blocks', 'N/A')} |
-| Total transactions | {b.get('total_transactions', 'N/A'):,} |
+| Total transactions | {_fmt_num(b.get('total_transactions', 'N/A'))} |
 
 ---
 
@@ -280,7 +291,7 @@ def generate_report(all_results, output_path):
 
 | Metric | Value |
 |--------|-------|
-| Checks/sec | **{s.get('checks_per_sec', 'N/A'):,}** |
+| Checks/sec | **{_fmt_num(s.get('checks_per_sec', 'N/A'))}** |
 | Latency/check | {s.get('us_per_check', 'N/A')} µs |
 | Total alerts | {s.get('total_alerts', 'N/A')} |
 
