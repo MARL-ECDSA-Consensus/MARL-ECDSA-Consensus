@@ -40,7 +40,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov
+          # P3-12修复: CI 需安装 asyncio/timeout 插件（--strict-markers 下
+          # test_gossip_discovery/p2p_consensus_network 的 marker 才被注册）
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout
 
       - name: Run test suite
         run: |
