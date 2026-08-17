@@ -70,7 +70,9 @@ class CWPBFTConsensusWithFailover(CWPBFTConsensus):
         self._view_change_count: int = 0
         self._current_view: int = 0
         # Byzantine detection
-        self._proposal_history: Dict[str, List[str]] = {}  # primary → [block_hashes]
+        # Key: (primary_id, block_height) → block_hash
+        # Only same height with different hash → byzantine
+        self._proposal_history: Dict[Tuple[str, int], str] = {}
         self._byzantine_primaries: set = set()
 
     # -------------------------------------------------------------------------
@@ -101,35 +103,59 @@ class CWPBFTConsensusWithFailover(CWPBFTConsensus):
     # Byzantine Primary Detection
     # -------------------------------------------------------------------------
 
-    def detect_byzantine_primary(self, primary_id: str, block_hash: str) -> bool:
+    def detect_byzantine_primary(self, primary_id: str, block_hash: str, block_height: int) -> bool:
         """
         Detect if primary is proposing contradictory blocks.
 
-        Byzantine behavior: same primary proposes different blocks for same height
-        or proposes blocks with invalid state transitions.
+        Byzantine behavior: same primary proposes different block hashes
+        for the SAME block height (equivocation).
+
+        Normal operation: each round produces a new hash for a new height,
+        which is NOT byzantine.
+
+        :param primary_id: The primary node proposing the block
+        :param block_hash: The hash of the proposed block
+        :param block_height: The height of the proposed block
+        :return: True if byzantine behavior detected, False otherwise
         """
-        if primary_id not in self._proposal_history:
-            self._proposal_history[primary_id] = []
+        key = (primary_id, block_height)
 
-        history = self._proposal_history[primary_id]
+        if key not in self._proposal_history:
+            # First proposal for this (primary, height) — record and continue
+            self._proposal_history[key] = block_hash
+            self._cleanup_old_proposals(block_height)
+            return False
 
-        # Check for contradictory proposals (different hash for same context)
-        if len(history) > 0 and block_hash not in history:
+        existing_hash = self._proposal_history[key]
+        if existing_hash != block_hash:
+            # Same height, different hash → genuine byzantine equivocation
             logger.warning(
                 f"[CW-PBFT-Failover] ⚠️ Byzantine primary detected: "
-                f"{primary_id} proposed multiple conflicting blocks! "
-                f"Previous: {history[-1][:16]}... New: {block_hash[:16]}..."
+                f"{primary_id} proposed conflicting blocks at height {block_height}! "
+                f"Previous: {existing_hash[:16]}... New: {block_hash[:16]}..."
             )
             self._byzantine_primaries.add(primary_id)
             self._primary_status[primary_id] = PrimaryStatus.BYZANTINE
             return True
 
-        history.append(block_hash)
-        # Keep only recent proposals (last 10)
-        if len(history) > 10:
-            self._proposal_history[primary_id] = history[-10:]
-
+        # Same height, same hash → duplicate/retransmit, not byzantine
         return False
+
+    def _cleanup_old_proposals(self, current_height: int, keep: int = 10):
+        """
+        Remove proposal history entries older than `keep` heights
+        to bound memory usage.
+
+        :param current_height: The latest block height being processed
+        :param keep: Number of recent heights to retain (default 10)
+        """
+        if len(self._proposal_history) <= keep:
+            return
+        cutoff = current_height - keep
+        # Delete entries whose height is older than the cutoff
+        keys_to_remove = [k for k in self._proposal_history if k[1] < cutoff]
+        for k in keys_to_remove:
+            del self._proposal_history[k]
 
     # -------------------------------------------------------------------------
     # View Change Protocol
@@ -182,6 +208,7 @@ class CWPBFTConsensusWithFailover(CWPBFTConsensus):
         self,
         block_hash: str,
         proposer: str,
+        block_height: int = 0,
         simulate_byzantine: bool = False,
         simulate_timeout: bool = False,
     ) -> Tuple[bool, Optional[FailoverRecord]]:
@@ -190,6 +217,7 @@ class CWPBFTConsensusWithFailover(CWPBFTConsensus):
 
         :param block_hash: Block hash to achieve consensus on
         :param proposer: Proposed primary node
+        :param block_height: Block height (for byzantine detection)
         :param simulate_byzantine: Force the proposer to act Byzantine
         :param simulate_timeout: Force the proposer to timeout
         :return: (consensus_success, failover_record)
@@ -234,7 +262,7 @@ class CWPBFTConsensusWithFailover(CWPBFTConsensus):
 
         # Step 3: Byzantine primary detection
         if not simulate_byzantine:
-            is_byz = self.detect_byzantine_primary(actual_proposer, block_hash)
+            is_byz = self.detect_byzantine_primary(actual_proposer, block_hash, block_height)
             if is_byz:
                 new_primary = self.trigger_view_change(actual_proposer, "byzantine_detected")
                 if new_primary:
@@ -283,6 +311,7 @@ class CWPBFTConsensusWithFailover(CWPBFTConsensus):
 
             ok, record = self.simulated_consensus_with_failover(
                 block_hash, proposer,
+                block_height=r,
                 simulate_byzantine=is_byzantine,
             )
 
@@ -373,7 +402,7 @@ if __name__ == "__main__":
 
     # Test 1: Normal consensus (no failover)
     print("\n1. Normal consensus (no Byzantine)...")
-    ok, record = consensus.simulated_consensus_with_failover("hash_normal", "node_0")
+    ok, record = consensus.simulated_consensus_with_failover("hash_normal", "node_0", block_height=0)
     print(f"   Result: {'PASS' if ok else 'FAIL'}, failover={'Yes' if record else 'No'}")
 
     # Test 2: Byzantine primary simulation

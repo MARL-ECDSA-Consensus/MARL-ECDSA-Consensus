@@ -108,6 +108,7 @@ class StandardPBFTConsensus:
         if phase == 'commit' and self._state == ConsensusState.COMMIT:
             if self._check_vote_threshold('commit'):
                 self._state = ConsensusState.COMMITTED
+                self.consensus_success_count += 1
                 logger.info(f"[PBFT] 共识达成: {self._current_block_hash[:16]}...")
 
         return None

@@ -63,6 +63,10 @@ class NetworkConsensusNode:
         self._consensus_done = threading.Event()
         self._consensus_result: Optional[bool] = None
 
+        # B3修复：共识状态跨线程锁，保护 _state/_votes/_current_block_hash
+        # 主线程 propose_consensus 与 P2P 事件循环 _on_prepare/_on_commit 并发访问
+        self._consensus_lock = threading.RLock()
+
         # 消息计数
         self.msg_sent = 0
         self.msg_received = 0
@@ -155,15 +159,17 @@ class NetworkConsensusNode:
 
         # 主节点自己也进入 PREPARE 状态并构造 PREPARE 票
         from ..consensus.cw_pbft import ConsensusVote as _CV, ConsensusState as _CS
-        self.cw_pbft._state = _CS.PREPARE
-        prepare_vote = _CV(
-            voter_id=self.node_id,
-            block_hash=block_hash,
-            phase='prepare',
-            weight=self.cw_pbft._weights.get(self.node_id, 1.0),
-        )
-        # 主节点把自己的 prepare 票加到投票池（必须在广播前完成，避免线程竞争）
-        self.cw_pbft._votes['prepare'][self.node_id] = prepare_vote
+        # B3修复：临界区加锁，防止与 _on_prepare/_on_commit 并发竞态
+        with self._consensus_lock:
+            self.cw_pbft._state = _CS.PREPARE
+            prepare_vote = _CV(
+                voter_id=self.node_id,
+                block_hash=block_hash,
+                phase='prepare',
+                weight=self.cw_pbft._weights.get(self.node_id, 1.0),
+            )
+            # 主节点把自己的 prepare 票加到投票池（必须在广播前完成，避免线程竞争）
+            self.cw_pbft._votes['prepare'][self.node_id] = prepare_vote
 
         # 一次性异步广播 PRE-PREPARE + PREPARE（确保本地票已就位后再发消息）
         async def _broadcast_both():
@@ -191,15 +197,17 @@ class NetworkConsensusNode:
 
         # 如果处于上轮残留状态（COMMITTED），先重置再处理新轮
         from ..consensus.cw_pbft import ConsensusState as _CS
-        if self.cw_pbft._state == _CS.COMMITTED:
-            logger.info(f"[NetConsensus] {self.node_id} 收到新轮 PRE-PREPARE，重置上轮 COMMITTED 状态")
-            self.cw_pbft.reset()
+        # B3修复：临界区加锁，包裹 reset + receive_pre_prepare + _votes 修改
+        with self._consensus_lock:
+            if self.cw_pbft._state == _CS.COMMITTED:
+                logger.info(f"[NetConsensus] {self.node_id} 收到新轮 PRE-PREPARE，重置上轮 COMMITTED 状态")
+                self.cw_pbft.reset()
 
-        prepare_vote = self.cw_pbft.receive_pre_prepare(block_hash, primary_id)
+            prepare_vote = self.cw_pbft.receive_pre_prepare(block_hash, primary_id)
 
-        # 关键：副本节点必须把自己的 PREPARE 票加入本地投票池！
-        # 否则 _check_weight_threshold 统计时缺少自己的票，导致阈值永远不够
-        self.cw_pbft._votes['prepare'][self.node_id] = prepare_vote
+            # 关键：副本节点必须把自己的 PREPARE 票加入本地投票池！
+            # 否则 _check_weight_threshold 统计时缺少自己的票，导致阈值永远不够
+            self.cw_pbft._votes['prepare'][self.node_id] = prepare_vote
 
         logger.debug(f"[NetConsensus] {self.node_id} ← PRE-PREPARE from {from_node}")
         await self._broadcast_vote(MessageType.CONSENSUS_PREPARE, prepare_vote)
@@ -225,33 +233,41 @@ class NetworkConsensusNode:
 
         # 严格校验：_current_block_hash 必须已由 start_consensus/receive_pre_prepare 设置
         # 不再从投票消息自动设置——防止上轮残留消息污染哈希
-        if self.cw_pbft._current_block_hash is None:
-            logger.warning(f"[NetConsensus] {self.node_id} 丢弃 PREPARE：_current_block_hash 未设置")
-            return
-        if vote.block_hash != self.cw_pbft._current_block_hash:
-            logger.warning(f"[NetConsensus] {self.node_id} 丢弃 PREPARE：hash 不匹配 "
-                          f"({vote.block_hash[:8]} vs {self.cw_pbft._current_block_hash[:8]})")
-            return
+        # B3修复：临界区加锁，保护 _state/_votes/_current_block_hash 并发访问
+        with self._consensus_lock:
+            if self.cw_pbft._current_block_hash is None:
+                logger.warning(f"[NetConsensus] {self.node_id} 丢弃 PREPARE：_current_block_hash 未设置")
+                return
+            if vote.block_hash != self.cw_pbft._current_block_hash:
+                logger.warning(f"[NetConsensus] {self.node_id} 丢弃 PREPARE：hash 不匹配 "
+                              f"({vote.block_hash[:8]} vs {self.cw_pbft._current_block_hash[:8]})")
+                return
 
-        # 确保当前节点处于 PREPARE 状态
-        from ..consensus.cw_pbft import ConsensusState as _CS
-        if self.cw_pbft._state != _CS.COMMITTED:
-            self.cw_pbft._state = _CS.PREPARE
-
-        commit_vote = self.cw_pbft.receive_vote(vote)
-        if commit_vote:
-            # 达到 2/3 权重阈值：
-            # 1. 把自己的 COMMIT 加进自己的投票池（本地直接计入，不走网络去重）
-            self.cw_pbft._votes['commit'][self.node_id] = commit_vote
-            # 2. 广播 COMMIT 给其他节点
-            await self._broadcast_vote(MessageType.CONSENSUS_COMMIT, commit_vote)
-            # 3. 本节点也立即检查是否因本次 commit 达到阈值（短路：本地不走 _on_commit）
+            # 确保当前节点处于 PREPARE 状态
             from ..consensus.cw_pbft import ConsensusState as _CS
-            self.cw_pbft._state = _CS.COMMIT
-            if self.cw_pbft._check_weight_threshold('commit'):
-                self.cw_pbft._state = _CS.COMMITTED
-                self._consensus_result = True
-                self._consensus_done.set()
+            if self.cw_pbft._state != _CS.COMMITTED:
+                self.cw_pbft._state = _CS.PREPARE
+
+            commit_vote = self.cw_pbft.receive_vote(vote)
+            if commit_vote:
+                # 达到 2/3 权重阈值：
+                # 1. 把自己的 COMMIT 加进自己的投票池（本地直接计入，不走网络去重）
+                self.cw_pbft._votes['commit'][self.node_id] = commit_vote
+                # 2. 广播 COMMIT 给其他节点（在锁外广播，避免阻塞 event loop）
+                broadcast_commit = commit_vote
+                # 3. 本节点也立即检查是否因本次 commit 达到阈值（短路：本地不走 _on_commit）
+                from ..consensus.cw_pbft import ConsensusState as _CS
+                self.cw_pbft._state = _CS.COMMIT
+                consensus_complete = False
+                if self.cw_pbft._check_weight_threshold('commit'):
+                    self.cw_pbft._state = _CS.COMMITTED
+                    self._consensus_result = True
+                    self._consensus_done.set()
+                    consensus_complete = True
+        # 锁外广播 + 日志
+        if commit_vote:
+            await self._broadcast_vote(MessageType.CONSENSUS_COMMIT, broadcast_commit)
+            if consensus_complete:
                 logger.info(f"[NetConsensus] {self.node_id} confirmed consensus complete (local)")
 
     async def _on_commit(self, msg: Dict, from_node: str):
@@ -274,24 +290,29 @@ class NetworkConsensusNode:
         logger.debug(f"[NetConsensus] {self.node_id} <- COMMIT from {from_node}")
 
         # 严格校验：_current_block_hash 必须已由 start_consensus/receive_pre_prepare 设置
-        if self.cw_pbft._current_block_hash is None:
-            logger.warning(f"[NetConsensus] {self.node_id} 丢弃 COMMIT：_current_block_hash 未设置")
-            return
-        if vote.block_hash != self.cw_pbft._current_block_hash:
-            logger.warning(f"[NetConsensus] {self.node_id} 丢弃 COMMIT：hash 不匹配 "
-                          f"({vote.block_hash[:8]} vs {self.cw_pbft._current_block_hash[:8]})")
-            return
+        # B3修复：临界区加锁，保护 _state/_votes/_current_block_hash 并发访问
+        with self._consensus_lock:
+            if self.cw_pbft._current_block_hash is None:
+                logger.warning(f"[NetConsensus] {self.node_id} 丢弃 COMMIT：_current_block_hash 未设置")
+                return
+            if vote.block_hash != self.cw_pbft._current_block_hash:
+                logger.warning(f"[NetConsensus] {self.node_id} 丢弃 COMMIT：hash 不匹配 "
+                              f"({vote.block_hash[:8]} vs {self.cw_pbft._current_block_hash[:8]})")
+                return
 
-        # 确保在 COMMIT 状态才能统计
-        from ..consensus.cw_pbft import ConsensusState as _CS
-        if self.cw_pbft._state != _CS.COMMITTED:
-            self.cw_pbft._state = _CS.COMMIT
+            # 确保在 COMMIT 状态才能统计
+            from ..consensus.cw_pbft import ConsensusState as _CS
+            if self.cw_pbft._state != _CS.COMMITTED:
+                self.cw_pbft._state = _CS.COMMIT
 
-        self.cw_pbft.receive_vote(vote)
+            self.cw_pbft.receive_vote(vote)
 
-        if self.cw_pbft.is_consensus_reached():
-            self._consensus_result = True
-            self._consensus_done.set()
+            consensus_done = self.cw_pbft.is_consensus_reached()
+            if consensus_done:
+                self._consensus_result = True
+                self._consensus_done.set()
+        # 锁外日志
+        if consensus_done:
             logger.info(f"[NetConsensus] {self.node_id} confirmed consensus complete")
 
     # -------------------------------------------------------------------------
