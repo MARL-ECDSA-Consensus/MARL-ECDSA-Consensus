@@ -242,7 +242,9 @@ def _route_block_explorer():
     """区块浏览器数据"""
     bc_data = _load_result_file('training_results_bc.json') or _load_result_file('training_results_bc_marl_combined.json')
     if not bc_data:
-        return jsonify({'blocks': [], 'total_blocks': 0, 'total_transactions': 0, 'chain_valid': True, 'message': 'No data'})
+        return jsonify({'blocks': [], 'total_blocks': 0, 'total_transactions': 0, 'chain_valid': True,
+                       'ecdsa_stats': {}, 'consensus_stats': {}, 'blockchain_stats': {},
+                       'message': 'No data'})
     stats = bc_data.get('blockchain_stats', {})
     n_blocks, n_tx = stats.get('height', 0), stats.get('total_transactions', 0)
     tx_per_block = max(1, n_tx // max(1, n_blocks))
