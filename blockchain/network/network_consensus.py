@@ -358,14 +358,20 @@ class NetworkConsensusNode:
         2. 重新构造签名消息体（排除signature_hex自身）
         3. 用voter_id对应的公钥验签，确认voter_id与签名公钥绑定
 
-        无key_manager时：宽松验证（仅检查签名格式），适用于纯P2P测试场景
+        ⚠️ 安全说明（诚实声明）：
+        - 有 key_manager：严格验签，voter_id 与签名公钥绑定，防伪造（生产安全）。
+        - 无 key_manager：**非生产安全**，仅用于无密钥的纯 P2P 网络/连通性测试。
+          此路径不提供身份保证——无签名票放行（向后兼容）、有签名票仅校验
+          字节长度（≥64，ECDSA secp256r1 DER 签名下界）不真验签。
+          生产/演示若需密码学安全闭环，必须注入 key_manager。
         """
         signature_hex = data.get("signature_hex")
         if signature_hex is None:
             if self.key_manager is not None:
                 logger.warning(f"[NetConsensus] 投票无签名: voter={voter_id}")
                 return False
-            # 无key_manager时允许无签名投票（向后兼容）
+            # 无key_manager：非生产安全，放行无签名票（仅限纯P2P测试场景）
+            logger.debug(f"[NetConsensus] 非生产安全模式：放行无签名投票 voter={voter_id}")
             return True
 
         try:
@@ -395,7 +401,8 @@ class NetworkConsensusNode:
                     )
                 return verified
             else:
-                # 无key_manager时：宽松验证（仅检查签名格式）
+                # 无key_manager：非生产安全，仅校验签名字节长度（ECDSA secp256r1 下界≥64）
+                # 不提供身份保证，仅用于纯网络连通性测试
                 return len(signature_bytes) >= 64
         except Exception as e:
             logger.warning(f"[NetConsensus] 签名验证异常: voter={voter_id}, {e}")

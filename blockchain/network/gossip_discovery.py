@@ -3,6 +3,14 @@ Gossip Dynamic Node Discovery Protocol
 =======================================
 Replaces static P2P neighbor configuration with decentralized dynamic discovery.
 
+⚠️ 实现状态说明（诚实声明）：
+  当前版本为**模拟层**——shuffle 交换通过 `_simulate_peer_view()` 本地构造邻居，
+  不走真实 P2P 网络传输；`discovery_latency_ms` 因 `_join_start` 在纯模拟路径下
+  未设置，实测值 ≈ 0，**不反映真实网络延迟**。
+  结构（HyParView 风格的 active/passive view、dead node 检测/清理）是合理的，
+  可作为真实 gossip 层的骨架；但演示/答辩时需注明"模拟层，非真实网络测量"，
+  避免与真实 P2P 指标混淆。接入真实网络层后此标注应移除。
+
 Key features:
   - Partial View maintenance (HyParView-inspired, O(log n) per node)
   - Periodic shuffle exchanges for membership propagation
@@ -358,7 +366,10 @@ class GossipDiscovery:
     # -------------------------------------------------------------------------
 
     def get_stats(self) -> Dict:
-        """Get discovery protocol statistics."""
+        """Get discovery protocol statistics.
+
+        ⚠️ 注：模拟层下 `discovery_latency_ms` 实测 ≈ 0，不反映真实网络延迟。
+        """
         return {
             "node_id": self.node_id,
             "active_peers": len(self.active_view),

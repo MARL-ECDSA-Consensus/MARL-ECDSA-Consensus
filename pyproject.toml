@@ -48,7 +48,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/marl-ecdsa-consensus-chain"
+Homepage = "https://example.invalid/marl-ecdsa-consensus-chain"
 
 [tool.setuptools.packages.find]
 include = [

@@ -19,11 +19,20 @@ MARL-ECDSA 共识链 — 全功能可视化平台 v3.9（共识投票+区块浏�
 import json
 import logging
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Optional, Dict, Any
 
 logger = logging.getLogger('dashboard')
+
+# 大改后 attack_defense_demo 等脚本迁至 scripts/legacy/{analysis,experiments}/，
+# dashboard 攻防演示接口仍按顶层模块名 import。将其目录加入 sys.path 以兼容
+#（与 tests/conftest.py 同步）。
+for _sub in ("analysis", "experiments"):
+    _legacy_dir = str(Path(__file__).resolve().parent.parent / "scripts" / "legacy" / _sub)
+    if os.path.isdir(_legacy_dir) and _legacy_dir not in sys.path:
+        sys.path.insert(0, _legacy_dir)
 
 try:
     from flask import Flask, render_template, render_template_string, jsonify, request, send_from_directory
@@ -115,10 +124,20 @@ def update_data(stats, trainer=None):
 
 
 def _load_result_file(filename: str) -> Optional[Dict]:
-    """加载训练结果 JSON 文件"""
+    """加载训练结果 JSON 文件
+
+    大改后 training_results_*.json 迁至 results/legacy_json/，此处支持回退加载：
+    先查项目根，再查 results/legacy_json/，保证 dashboard 演示有数据。
+    """
+    # 1. 项目根（兼容旧路径）
     filepath = _BASE_DIR / filename
     if filepath.exists():
         with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    # 2. results/legacy_json/ 回退（大改后迁移位置）
+    legacy_path = _BASE_DIR / 'results' / 'legacy_json' / filename
+    if legacy_path.exists():
+        with open(legacy_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     return None
 
@@ -269,6 +288,11 @@ def _compute_merkle_placeholder(block_idx: int) -> str:
 # 一键注入攻击演示（攻防演示标签页）
 # =============================================================================
 
+# 攻防演示接口需要切到项目根目录（attack_defense_demo 内部用相对路径找密钥）。
+# Flask 多线程下 os.chdir 改全局 CWD 不安全，用此锁串行化该接口（低频操作，不影响性能）。
+_attack_inject_lock = threading.Lock()
+
+
 def _route_api_attack_inject():
     """
     一键注入攻击演示 API
@@ -278,74 +302,76 @@ def _route_api_attack_inject():
     attack_type = request.args.get('type', 'all')
 
     # 攻击演示使用相对密钥目录，统一切到项目根再执行
+    # 加锁避免多线程并发请求互相踩全局 CWD
     cwd_backup = os.getcwd()
-    try:
-        os.chdir(str(_BASE_DIR))
-    except Exception:
-        pass
+    with _attack_inject_lock:
+        try:
+            os.chdir(str(_BASE_DIR))
+        except Exception:
+            pass
 
-    try:
-        if attack_type == 'byzantine':
-            from blockchain.consensus.cw_pbft_failover import CWPBFTConsensusWithFailover
-            nodes = [f'node_{i}' for i in range(5)]
-            sim = CWPBFTConsensusWithFailover(nodes[0], nodes)
-            # 受控场景：奇数轮注入拜占庭主节点，验证 CW-PBFT 动态故障切换
-            byz_rounds = 0
-            recovered_rounds = 0
-            records = []
-            for r in range(8):
-                h = f'byzantine_demo_{r:04d}'
-                prop = sim.get_primary(r)
-                is_byz = (r % 2 == 1)
-                ok, rec = sim.simulated_consensus_with_failover(
-                    h, prop, simulate_byzantine=is_byz,
-                )
-                if is_byz:
-                    byz_rounds += 1
-                    if rec and rec.consensus_recovered:
-                        recovered_rounds += 1
-                if rec:
-                    records.append({
-                        'round': r, 'failed_primary': rec.failed_primary,
-                        'new_primary': rec.new_primary,
-                        'latency_ms': rec.failover_latency_ms,
-                        'recovered': rec.consensus_recovered,
-                    })
-            all_recovered = byz_rounds > 0 and recovered_rounds == byz_rounds
-            return jsonify({
-                'attack_type': 'byzantine_primary',
-                'no_bc': {
-                    'attack_successful': True,
-                    'description': '无CW-PBFT动态故障切换：拜占庭主节点反复发起冲突提案，共识被阻塞/分叉',
-                },
-                'with_bc': {
-                    'attack_successful': not all_recovered,
-                    'description': 'CW-PBFT动态故障切换：检测拜占庭主节点并触发视图更换，共识快速恢复',
-                    'byzantine_events': byz_rounds,
-                    'successful_failovers': recovered_rounds,
-                    'all_recovered': all_recovered,
-                },
-                'details': records[:8],
-            })
+        try:
+            if attack_type == 'byzantine':
+                from blockchain.consensus.cw_pbft_failover import CWPBFTConsensusWithFailover
+                nodes = [f'node_{i}' for i in range(5)]
+                sim = CWPBFTConsensusWithFailover(nodes[0], nodes)
+                # 受控场景：奇数轮注入拜占庭主节点，验证 CW-PBFT 动态故障切换
+                byz_rounds = 0
+                recovered_rounds = 0
+                records = []
+                for r in range(8):
+                    h = f'byzantine_demo_{r:04d}'
+                    prop = sim.get_primary(r)
+                    is_byz = (r % 2 == 1)
+                    ok, rec = sim.simulated_consensus_with_failover(
+                        h, prop, block_height=r, simulate_byzantine=is_byz,
+                    )
+                    if is_byz:
+                        byz_rounds += 1
+                        if rec and rec.consensus_recovered:
+                            recovered_rounds += 1
+                    if rec:
+                        records.append({
+                            'round': r, 'failed_primary': rec.failed_primary,
+                            'new_primary': rec.new_primary,
+                            'latency_ms': rec.failover_latency_ms,
+                            'recovered': rec.consensus_recovered,
+                        })
+                all_recovered = byz_rounds > 0 and recovered_rounds == byz_rounds
+                return jsonify({
+                    'attack_type': 'byzantine_primary',
+                    'no_bc': {
+                        'attack_successful': True,
+                        'description': '无CW-PBFT动态故障切换：拜占庭主节点反复发起冲突提案，共识被阻塞/分叉',
+                    },
+                    'with_bc': {
+                        'attack_successful': not all_recovered,
+                        'description': 'CW-PBFT动态故障切换：检测拜占庭主节点并触发视图更换，共识快速恢复',
+                        'byzantine_events': byz_rounds,
+                        'successful_failovers': recovered_rounds,
+                        'all_recovered': all_recovered,
+                    },
+                    'details': records[:8],
+                })
 
-        import attack_defense_demo as demo
-        demos = {
-            'observation_forgery': demo.demo_observation_forgery,
-            'message_tampering': demo.demo_message_tampering,
-            'replay_attack': demo.demo_replay_attack,
-        }
-        if attack_type == 'all':
-            results = [fn() for fn in demos.values()]
-            return jsonify({'attack_type': 'all', 'results': results})
-        fn = demos.get(attack_type)
-        if fn is None:
-            return jsonify({'error': f'未知攻击类型: {attack_type}'}), 400
-        return jsonify(fn())
-    except Exception as e:
-        logger.exception("[Dashboard] 攻击注入失败")
-        return jsonify({'error': f'攻击模拟失败: {e}'}), 500
-    finally:
-        os.chdir(cwd_backup)
+            import attack_defense_demo as demo
+            demos = {
+                'observation_forgery': demo.demo_observation_forgery,
+                'message_tampering': demo.demo_message_tampering,
+                'replay_attack': demo.demo_replay_attack,
+            }
+            if attack_type == 'all':
+                results = [fn() for fn in demos.values()]
+                return jsonify({'attack_type': 'all', 'results': results})
+            fn = demos.get(attack_type)
+            if fn is None:
+                return jsonify({'error': f'未知攻击类型: {attack_type}'}), 400
+            return jsonify(fn())
+        except Exception as e:
+            logger.exception("[Dashboard] 攻击注入失败")
+            return jsonify({'error': f'攻击模拟失败: {e}'}), 500
+        finally:
+            os.chdir(cwd_backup)
 
 
 # =============================================================================

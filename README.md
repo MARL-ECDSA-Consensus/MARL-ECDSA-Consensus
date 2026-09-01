@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-435%20passed-brightgreen)](https://github.com/MARL-ECDSA-Consensus/MARL-ECDSA-Consensus/actions)
+[![Tests](https://img.shields.io/badge/Tests-1650%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **中文版**: [README.zh.md](README.zh.md)
@@ -165,9 +165,8 @@ If you use this project in research, please cite:
 ```bibtex
 @misc{marl-ecdsa-consensus-chain,
   title  = {MARL-ECDSA Consensus Chain: Blockchain--AI Synergistic Consensus for Multi-Agent Reinforcement Learning},
-  author = {{TrueFurina}},
-  year   = {2026},
-  howpublished = {\url{https://github.com/MARL-ECDSA-Consensus/MARL-ECDSA-Consensus}}
+  author = {{MARL-ECDSA Team}},
+  year   = {2026}
 }
 ```
 

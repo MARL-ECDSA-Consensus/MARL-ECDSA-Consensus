@@ -136,7 +136,9 @@ class DilithiumAdapter(SignatureAdapter):
         return "CRYSTALS-Dilithium2" if DILITHIUM_AVAILABLE else "ECDSA(Dilithium-fallback)"
 
     def get_security_level(self) -> str:
-        return "128-bit classical | 128-bit quantum (NIST Level 2)"
+        if DILITHIUM_AVAILABLE:
+            return "128-bit classical | 128-bit quantum (NIST Level 2)"
+        return "0-bit quantum (Shor-vulnerable) — currently ECDSA fallback"
 
     def get_migration_readiness(self) -> Dict:
         """Report migration readiness status."""
