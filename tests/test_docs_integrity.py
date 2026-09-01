@@ -1,7 +1,9 @@
 """
-docs 文档完整性测试（RalphLoop 原子任务 AV）
-覆盖：文档存在性、非空、标题/表格结构、关键内容、README 双语
-通过标准：新增 ≥6 项测试全过
+docs 文档完整性测试（2026-09-01 匿名合规整改后更新）
+覆盖：身份敏感文档已移除、README 双语、关键工程文档结构
+背景：docs/ 下 5 个文件（24H_COVERAGE/AUTOMATION_EVIDENCE/QUALITY_AUDIT_LOG/
+RECORDS_AND_FORECAST/VERIFICATION_INDEX）含真实身份（TrueFurina）与刷绿自动化证据，
+已按匿名评审合规要求移出源码包——测试断言其不存在，防止身份信息回流入库。
 """
 import logging
 from pathlib import Path
@@ -13,53 +15,36 @@ logging.basicConfig(level=logging.CRITICAL)
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / 'docs'
 
-DOC_FILES = ['24H_COVERAGE.md', 'AUTOMATION_EVIDENCE.md', 'QUALITY_AUDIT_LOG.md',
-             'RECORDS_AND_FORECAST.md', 'VERIFICATION_INDEX.md']
+# 匿名合规整改后应从源码树移除的身份/刷绿证据文件
+REMOVED_DOCS = ['24H_COVERAGE.md', 'AUTOMATION_EVIDENCE.md', 'QUALITY_AUDIT_LOG.md',
+                'RECORDS_AND_FORECAST.md', 'VERIFICATION_INDEX.md']
 
 
-class TestDocExistence:
-    @pytest.mark.parametrize('fname', DOC_FILES)
-    def test_doc_exists(self, fname):
-        assert (DOCS / fname).exists()
+class TestAnonymousCompliance:
+    @pytest.mark.parametrize('fname', REMOVED_DOCS)
+    def test_identity_doc_removed(self, fname):
+        """身份敏感文档已从源码树移除（匿名合规）"""
+        assert not (DOCS / fname).exists(), f'{fname} 应已移除，防止身份信息泄漏'
 
-    @pytest.mark.parametrize('fname', DOC_FILES)
-    def test_doc_non_empty(self, fname):
-        content = (DOCS / fname).read_text(encoding='utf-8')
-        assert len(content.strip()) > 100  # 非空且有实质内容
+    def test_no_identity_leak_in_source(self):
+        """源码树不再包含真实身份标识"""
+        import re
+        pat = re.compile(r'truefurina|2468001320', re.I)
+        hits = []
+        for p in (ROOT / 'docs').rglob('*') if (ROOT / 'docs').exists() else []:
+            if p.is_file() and p.suffix in ('.md', '.txt', '.py', '.yml', '.json'):
+                try:
+                    if pat.search(p.read_text(encoding='utf-8', errors='ignore')):
+                        hits.append(str(p))
+                except Exception:
+                    pass
+        assert not hits, f'身份泄漏: {hits}'
 
-
-class TestDocStructure:
-    @pytest.mark.parametrize('fname', DOC_FILES)
-    def test_doc_has_heading(self, fname):
-        content = (DOCS / fname).read_text(encoding='utf-8')
-        assert any(line.startswith('#') for line in content.splitlines())
-
-    @pytest.mark.parametrize('fname', DOC_FILES)
-    def test_doc_has_table(self, fname):
-        content = (DOCS / fname).read_text(encoding='utf-8')
-        assert any(line.startswith('|') for line in content.splitlines())
-
-
-class TestKeyContent:
-    def test_verification_index_has_url(self):
-        """VERIFICATION_INDEX 含目标 URL"""
-        content = (DOCS / 'VERIFICATION_INDEX.md').read_text(encoding='utf-8')
-        assert 'github.com' in content
-
-    def test_24h_coverage_has_cron(self):
-        """24H_COVERAGE 含 cron 调度"""
-        content = (DOCS / '24H_COVERAGE.md').read_text(encoding='utf-8')
-        assert 'cron' in content or '*' in content
-
-    def test_quality_audit_has_rounds(self):
-        """QUALITY_AUDIT_LOG 含质检轮次"""
-        content = (DOCS / 'QUALITY_AUDIT_LOG.md').read_text(encoding='utf-8')
-        assert 'R1' in content or 'R2' in content
-
-    def test_automation_evidence_has_workflows(self):
-        """AUTOMATION_EVIDENCE 含工作流说明"""
-        content = (DOCS / 'AUTOMATION_EVIDENCE.md').read_text(encoding='utf-8')
-        assert 'heartbeat' in content.lower() or 'ci' in content.lower()
+    def test_no_github_badge_in_readme(self):
+        """README 不再引用真实 GitHub 仓库链接"""
+        for fname in ('README.md', 'README.zh.md'):
+            content = (ROOT / fname).read_text(encoding='utf-8', errors='ignore')
+            assert 'github.com/MARL-ECDSA-Consensus' not in content, f'{fname} 含真实仓库链接'
 
 
 class TestReadme:

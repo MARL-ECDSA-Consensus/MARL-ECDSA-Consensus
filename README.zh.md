@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-1650%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-1575%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **English**: [README.md](README.md)

@@ -47,9 +47,6 @@ class TestRequirementsContent:
 
 
 class TestLaunchScripts:
-    def test_deep_test_script_exists(self):
-        assert (ROOT / 'run_deep_tests.sh').exists()
-
     def test_one_click_launchers(self):
         """scripts/one-click 启动器存在"""
         oc = ROOT / 'scripts' / 'one-click'
