@@ -372,11 +372,13 @@ class BlockchainMARLBridge:
         self._block_count += 1
         if ok:
             return True
-        logger.warning(f"[Bridge] simulated_consensus失败，回退到fast_consensus")
-        ok = self.cw_pbft.fast_consensus(block.block_hash, proposer)
-        if not ok:
-            logger.warning(f"[Bridge] CW-PBFT共识彻底失败: Block #{block.block_height}")
-        return ok
+        # P0-D 修复（2026-09-01）：移除 fast_consensus 静默兜底。
+        # 共识失败须如实返回 False（区块不追加），不得伪造成功。
+        logger.warning(
+            f"[Bridge] simulated_consensus 失败，区块丢弃: "
+            f"Block #{block.block_height} (proposer={proposer})"
+        )
+        return False
 
     def _update_consensus_weights(self, scores):
         """更新共识权重"""

@@ -13,7 +13,7 @@ Standard Practical Byzantine Fault Tolerance
 """
 import logging
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from .cw_pbft import ConsensusState, ConsensusVote
 
@@ -144,6 +144,63 @@ class StandardPBFTConsensus:
                 voter_id=nid, block_hash=block_hash,
                 phase='commit', weight=1.0
             )
+
+        self._state = ConsensusState.COMMITTED
+        self.consensus_success_count += 1
+        return True
+
+    def simulated_consensus(
+        self,
+        block_hash: str,
+        proposer: str,
+        byzantine_nodes: Optional[Set[str]] = None,
+    ) -> bool:
+        """
+        单机版完整三阶段共识模拟（P0-D 拜占庭注入，与CW-PBFT接口一致）
+
+        P0-D 修复（2026-09-01）：新增 byzantine_nodes 参数，支持真实拜占庭容错验证。
+        被标记节点拒绝投票（省略故障模型）；按节点数计数，阈值 = ceil(2n/3)。
+        - 标准PBFT（等权）对拜占庭更敏感：当拜占庭节点数 > f=(n-1)//3 时共识失败；
+        - 无拜占庭（默认）时退化为全诚实路径。
+
+        区别于fast_consensus()：fast_consensus 恒成功且不检查阈值。
+        """
+        if byzantine_nodes is None:
+            byzantine_nodes = set()
+
+        # PRE-PREPARE
+        self._state = ConsensusState.PRE_PREPARE
+        self._current_block_hash = block_hash
+        self._consensus_start_ms = int(time.time() * 1000)
+        self._votes = {'prepare': {}, 'commit': {}}
+
+        # PREPARE：非拜占庭节点投票
+        self._state = ConsensusState.PREPARE
+        for nid in self.consensus_nodes:
+            if nid in byzantine_nodes:
+                continue
+            self._votes['prepare'][nid] = ConsensusVote(
+                voter_id=nid, block_hash=block_hash,
+                phase='prepare', weight=1.0
+            )
+        if not self._check_vote_threshold('prepare'):
+            self._state = ConsensusState.IDLE
+            self.consensus_fail_count += 1
+            return False
+
+        # COMMIT：非拜占庭节点投票
+        self._state = ConsensusState.COMMIT
+        for nid in self.consensus_nodes:
+            if nid in byzantine_nodes:
+                continue
+            self._votes['commit'][nid] = ConsensusVote(
+                voter_id=nid, block_hash=block_hash,
+                phase='commit', weight=1.0
+            )
+        if not self._check_vote_threshold('commit'):
+            self._state = ConsensusState.IDLE
+            self.consensus_fail_count += 1
+            return False
 
         self._state = ConsensusState.COMMITTED
         self.consensus_success_count += 1

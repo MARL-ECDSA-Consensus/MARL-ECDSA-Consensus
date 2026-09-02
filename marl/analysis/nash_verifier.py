@@ -22,7 +22,7 @@ Nash均衡验证器 — 博弈论证明BC激励机制使合作成为优势策略
     其中：
     - env_reward: MPE环境原始奖励（背叛可能获得1~2的短期优势）
     - bc_reward:  区块链激励结算奖励
-        合作: bc_c ≥ BASE_REWARD(10) + TOP_TIER_BONUS(5)*weighted_score ≥ 10
+        合作: bc_c = BASE_REWARD(10) + CONTRIB_GAIN(10)*weighted_score ∈ [10,20]（行为相关，P0-B修复后连续增益）
         背叛: bc_d = -BASE_REWARD * BETRAYAL_PENALTY_MULT = -20
     - λ: 区块链奖励权重（默认0.1）
 

@@ -54,16 +54,19 @@ class IncentiveContract:
     激励结算智能合约
     每个区块确认后自动执行结算
     核心规则（数学上保证合作>背叛）：
-    - 基础奖励：所有诚实智能体获得基础积分
-    - 贡献加成：贡献度前30%的智能体获得额外梯度奖励
+    - 基础奖励：所有诚实智能体获得基础积分（BASE_REWARD）
+    - 行为相关增益：delta = BASE_REWARD + CONTRIB_GAIN * weighted_score
+      （weighted_score 由任务/协作/合规三维加权得到，BC 奖励对个体行为可区分，
+       贡献越高 delta 越大，消除旧版"常数加成"导致的因果归因缺陷，见 2026-09-01 P0-B 修复）
     - 背叛惩罚：背叛者扣除双倍基础奖励（积分可为负）
     - 保证：E[合作收益] > E[背叛收益]
     """
 
     BASE_REWARD = 10.0        # 基础奖励积分
     BETRAYAL_PENALTY_MULT = 2.0  # 背叛惩罚倍数（双倍惩罚，与config.json一致）
-    TOP_TIER_RATIO = 0.30     # 贡献度前30%享受加成
-    TOP_TIER_BONUS = 5.0      # 顶层贡献加成积分
+    TOP_TIER_RATIO = 0.30     # 贡献度前30%享受加成（保留，兼容旧引用）
+    TOP_TIER_BONUS = 5.0      # 顶层贡献加成积分（保留，兼容旧引用）
+    CONTRIB_GAIN = 10.0       # 贡献增益系数：delta = BASE + CONTRIB_GAIN*weighted_score（行为相关，消除常数加成）
 
     def __init__(self, world_state: WorldState):
         self._ws = world_state
@@ -121,6 +124,16 @@ class IncentiveContract:
     ) -> Dict[str, float]:
         """
         区块确认后自动执行激励结算
+
+        P0-B 修复（2026-09-01）：将"常数加成"改为"行为相关连续增益"。
+        旧逻辑：3 智能体时 top_n=1，delta 恒为 {15,10,10}，与个体行为无关，
+        导致 BC 奖励对合作/不合作的普通智能体一视同仁，因果归因不成立。
+        新逻辑：delta_i = BASE_REWARD + CONTRIB_GAIN * weighted_score_i
+          - 与本智能体自身加权贡献度（任务+协作+合规）连续正相关；
+          - 贡献越高 delta 越大，BC 奖励对行为可区分（方差>0 且与行为相关）；
+          - 背叛者仍扣双倍基础奖励。
+        排序仅用于审计/排行榜，不再决定加成档位。
+
         :param block_height: 当前区块高度
         :param contribution_scores: 本轮所有智能体的贡献度评分
         :return: 每个智能体的本轮奖励变化 {agent_id: delta}
@@ -131,7 +144,7 @@ class IncentiveContract:
         deltas: Dict[str, float] = {}
         records: List[Dict] = []
 
-        # 按综合贡献度排序
+        # 按综合贡献度排序（用于审计/排行榜，但奖励不再仅由排名决定）
         sorted_agents = sorted(
             contribution_scores,
             key=lambda x: x.weighted_score,
@@ -139,31 +152,28 @@ class IncentiveContract:
         )
 
         n_agents = len(sorted_agents)
-        top_n = max(1, int(n_agents * self.TOP_TIER_RATIO))
 
         for rank, cs in enumerate(sorted_agents):
             agent_id = cs.agent_id
             delta = 0.0
             reason = []
 
-            # 规则1：背叛惩罚（扣除双倍基础奖励）
             if cs.compliance_score == 0.0:
+                # 背叛惩罚（扣除双倍基础奖励）
                 penalty = -self.BASE_REWARD * self.BETRAYAL_PENALTY_MULT
                 delta += penalty
                 reason.append(f"背叛惩罚 {penalty:.1f}")
-                # 通知世界状态记录背叛
                 self._ws.record_betrayal(agent_id, block_height)
             else:
-                # 规则2：基础奖励（诚实智能体）
-                delta += self.BASE_REWARD
-                reason.append(f"基础奖励 +{self.BASE_REWARD}")
+                # 行为相关激励：基础奖励 + 与自身加权贡献度连续的增益
+                # 消除"常数加成"：贡献越高，增益越大，BC 奖励对行为可区分
+                contrib_gain = self.CONTRIB_GAIN * cs.weighted_score
+                delta = self.BASE_REWARD + contrib_gain
+                reason.append(
+                    f"基础{self.BASE_REWARD:.0f}+贡献增益{contrib_gain:.2f}"
+                    f"(加权贡献{cs.weighted_score:.3f})"
+                )
                 self._ws.record_cooperation(agent_id)
-
-                # 规则3：贡献加成（前30%）
-                if rank < top_n:
-                    tier_bonus = self.TOP_TIER_BONUS * (1 - rank / top_n)  # 梯度加成
-                    delta += tier_bonus
-                    reason.append(f"贡献加成 +{tier_bonus:.1f} (排名{rank+1}/{n_agents})")
 
             # 更新世界状态积分
             self._ws.add_score(agent_id, delta)
@@ -185,9 +195,11 @@ class IncentiveContract:
             })
 
         self._settlement_history[block_height] = records
+        _min = min(deltas.values())
+        _max = max(deltas.values())
         logger.info(
             f"[IncentiveContract] 区块#{block_height} 激励结算完成，"
-            f"涉及{n_agents}个智能体"
+            f"涉及{n_agents}个智能体，delta范围=[{_min:.2f},{_max:.2f}]"
         )
         return deltas
 

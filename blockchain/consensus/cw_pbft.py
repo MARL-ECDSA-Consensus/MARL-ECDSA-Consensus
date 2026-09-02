@@ -256,32 +256,41 @@ class CWPBFTConsensus:
         logger.info(f"[CW-PBFT] 快速共识完成: {block_hash[:16]}...")
         return True
 
-    def simulated_consensus(self, block_hash: str, proposer: str) -> bool:
+    def simulated_consensus(
+        self,
+        block_hash: str,
+        proposer: str,
+        byzantine_nodes: Optional[Set[str]] = None,
+    ) -> bool:
         """
-        单机版完整三阶段共识模拟（P1-关键架构修复）
+        单机版完整三阶段共识模拟（P1-关键架构修复 + P0-D 拜占庭注入）
+
+        P0-D 修复（2026-09-01）：新增 byzantine_nodes 参数，
+        支持真实拜占庭容错验证。被标记的节点将拒绝投票
+        （省略故障 / 拒绝服务模型），从而真实消费 byz_ratio：
+        - 当拜占庭节点权重之和 > 1/3 总权重时，投票权重无法达到
+          2/3 阈值，共识将真实失败（而非像 fast_consensus 那样恒为成功）；
+        - 无拜占庭节点（默认）时退化为原全诚实路径，训练流程不受影响。
 
         区别于fast_consensus()：
         - 执行完整PREPARE→COMMIT→FINALIZE三阶段流程
-        - 每阶段检查权重阈值：prepare阶段需总投票权重>2/3总权重
-        - commit阶段同样需总投票权重>2/3总权重
+        - 每阶段检查权重阈值：prepare/commit阶段均需总投票权重>2/3总权重
         - 阈值不满足时共识失败（而非像fast_consensus那样直接通过）
-
-        适用场景：
-        - 单机训练环境（无P2P网络）
-        - 需要验证权重阈值逻辑是否正常工作
-        - 替代fast_consensus()作为默认共识方法
         """
+        if byzantine_nodes is None:
+            byzantine_nodes = set()
+
         # ── PRE-PREPARE阶段：主节点提议 ──
         self._state = ConsensusState.PRE_PREPARE
         self._current_block_hash = block_hash
         self._consensus_start_ms = int(time.time() * 1000)
         self._votes = {'prepare': {}, 'commit': {}}
 
-        proposer_weight = self._weights.get(proposer, self.INITIAL_WEIGHT)
-
-        # ── PREPARE阶段：所有节点投票 ──
+        # ── PREPARE阶段：非拜占庭节点投票 ──
         self._state = ConsensusState.PREPARE
         for nid in self.consensus_nodes:
+            if nid in byzantine_nodes:
+                continue  # 拜占庭节点拒绝投票（省略故障模型）
             w = self._weights.get(nid, self.INITIAL_WEIGHT)
             self._votes['prepare'][nid] = ConsensusVote(
                 voter_id=nid, block_hash=block_hash,
@@ -294,13 +303,15 @@ class CWPBFTConsensus:
             self.consensus_fail_count += 1
             logger.warning(
                 f"[CW-PBFT] simulated_consensus PREPARE阶段权重阈值不满足: "
-                f"block_hash={block_hash[:16]}"
+                f"block_hash={block_hash[:16]} | byzantine={len(byzantine_nodes)}"
             )
             return False
 
-        # ── COMMIT阶段：所有节点投票 ──
+        # ── COMMIT阶段：非拜占庭节点投票 ──
         self._state = ConsensusState.COMMIT
         for nid in self.consensus_nodes:
+            if nid in byzantine_nodes:
+                continue
             w = self._weights.get(nid, self.INITIAL_WEIGHT)
             self._votes['commit'][nid] = ConsensusVote(
                 voter_id=nid, block_hash=block_hash,
@@ -313,7 +324,7 @@ class CWPBFTConsensus:
             self.consensus_fail_count += 1
             logger.warning(
                 f"[CW-PBFT] simulated_consensus COMMIT阶段权重阈值不满足: "
-                f"block_hash={block_hash[:16]}"
+                f"block_hash={block_hash[:16]} | byzantine={len(byzantine_nodes)}"
             )
             return False
 
