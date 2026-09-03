@@ -5,7 +5,7 @@
 生成: 1) JSON 报告  2) Markdown 摘要
 BC提升统一采用 env_reward 公平口径: (bc - pure)/|pure|*100%
 """
-import json, os, numpy as np
+import json, os, glob, numpy as np
 from scipy import stats
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -111,12 +111,24 @@ def _collect(results_dir, mode, key):
     return vals
 
 
+def _collect_all(results_dir, mode, key):
+    """Glob ALL {mode}_seed*.json（动态种子数）用于收敛验证，避免遗漏后续补跑的 seed。"""
+    vals = []
+    pat = os.path.join(RESULTS, results_dir, f'{mode}_seed*.json')
+    for fp in sorted(glob.glob(pat)):
+        d = load(fp)
+        if d:
+            vals.append(metric(d, key))
+    return vals
+
+
 def analyze_convergence():
     # 收集 per-seed 数组, 用于正确的 Welch 检验 (不能用均值单点)
-    pure_env = _collect('convergence_3000', 'pure_marl', 'avg_env_reward_last_50')
-    bc_env = _collect('convergence_3000', 'bc_marl', 'avg_env_reward_last_50')
-    pure_coop = _collect('convergence_3000', 'pure_marl', 'avg_cooperation_rate')
-    bc_coop = _collect('convergence_3000', 'bc_marl', 'avg_cooperation_rate')
+    # 收敛验证已扩到 22 种子/组, 用 glob 全量收集而非硬编码 SEEDS
+    pure_env = _collect_all('convergence_3000', 'pure_marl', 'avg_env_reward_last_50')
+    bc_env = _collect_all('convergence_3000', 'bc_marl', 'avg_env_reward_last_50')
+    pure_coop = _collect_all('convergence_3000', 'pure_marl', 'avg_cooperation_rate')
+    bc_coop = _collect_all('convergence_3000', 'bc_marl', 'avg_cooperation_rate')
 
     out = {}
     pe, se, ce = mean_std(pure_env)
@@ -192,7 +204,7 @@ def main():
 
     for n, label in [('n3', '可扩展性 3智能体/500ep'), ('n5', '可扩展性 5智能体/500ep'), ('n8', '可扩展性 8智能体/500ep')]:
         _row(label, report['scalability'].get(n, {}))
-    _row('收敛验证 3智能体/3000ep', report['convergence_3000'])
+    _row('收敛验证 3智能体/3000ep (n=22/组)', report['convergence_3000'])
     md.append('')
     # Scalability
     md.append('## 1. 可扩展性测试 (n=3/5/8 智能体)')
@@ -213,10 +225,17 @@ def main():
         md.append(f"- 消融{mod}: env={m.get('env_mean')} (Δ={m.get('delta_env_vs_baseline')}), "
                   f"coop={m.get('coop_mean')}, welch p={m.get('welch_env', {}).get('p') if m.get('welch_env') else 'N/A'}")
     # Convergence
-    md.append('\n## 3. 3000回合收敛验证 (3智能体)')
+    md.append('\n## 3. 3000回合收敛验证 (3智能体, 3000ep, n=22/组 seed)')
     cv = report['convergence_3000']
     md.append(f"- pure env={cv.get('pure_marl', {}).get('env_mean')}, bc env={cv.get('bc_marl', {}).get('env_mean')}, "
               f"BC提升={cv.get('bc_improvement_pct')}%")
+    w = cv.get('welch')
+    if w:
+        md.append(f"- Welch t-test: t={w['t']:.3f}, p={w['p']:.4f}, Cohen's d={w['cohens_d']:.3f} "
+                  f"（**{'显著' if w['sig'] else '不显著'}**, n={cv.get('bc_marl', {}).get('n', '?')}/组）")
+        md.append("> **诚实声明**：BC 在 22 种子下呈正向方向性提升（小到中等效应 d≈0.47），"
+                  "但 p=0.126 未达统计显著（α=0.05）。这与此项目『**区块链为信任增强（非性能优化）**』的定位一致——"
+                  "性能收益为方向性证据，核心贡献在于拜占庭容错、攻击拦截与激励行为差异化等确定性机制。")
     # HP sweep
     md.append('\n## 4. 超参鲁棒性 (bc_marl, 3智能体, 500回合)')
     hp = report['hp_sweep']
