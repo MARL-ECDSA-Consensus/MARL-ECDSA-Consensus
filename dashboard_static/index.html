@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MARL-ECDSA 共识链 — 可视化平台 v4.1</title>
+<title>MARL-ECDSA 共识链 — 可视化平台 v4.2</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #f0f4f8; color: #1e293b; }
@@ -47,7 +47,7 @@
 
 <header>
   <h1>MARL-ECDSA 共识链</h1>
-  <p>面向多智能体强化学习的区块链 AI 协同共识机制 — 可视化平台 v4.1</p>
+  <p>面向多智能体强化学习的区块链 AI 协同共识机制 — 可视化平台 v4.2</p>
 </header>
 
 <div class="tabs">
@@ -73,41 +73,27 @@
   </div>
   <div class="img-container">
     <img src="images/dashboard_overview.png" alt="Dashboard 总览">
-    <div class="img-caption">Dashboard 总览面板 — 收敛验证数据监控</div>
+    <div class="img-caption">Dashboard 总览面板 — 收敛验证数据监控（3000 回合 / n=22 诚实口径）</div>
   </div>
 </div>
 
 <!-- 训练监控 -->
 <div class="tab-content" id="tab-1">
-  <div class="section-title">训练奖励曲线</div>
+  <div class="info-box">训练监控面板（3000 回合收敛验证，n=22 种子）。合作率收敛后（末 50 回合）BC-MARL 69.5% / Pure 69.5%，两组无差异，如实呈现。</div>
+  <div class="section-title">训练监控面板</div>
   <div class="img-container">
-    <img src="images/training_curve.png" alt="训练曲线">
-    <div class="img-caption">BC-MARL vs Pure-MARL vs Selfish 训练奖励曲线（平滑窗口=50）</div>
-  </div>
-  <div class="section-title">训练损失</div>
-  <div class="img-container">
-    <img src="images/training_loss.png" alt="损失曲线">
-    <div class="img-caption">BC-MARL 训练 TD Loss 曲线</div>
-  </div>
-  <div class="section-title">合作率趋势</div>
-  <div class="img-container">
-    <img src="images/cooperation_rate.png" alt="合作率">
-    <div class="img-caption">合作率收敛后（末50回合）BC-MARL 69.5% / Pure 69.5%（两组无差异）</div>
+    <img src="images/dashboard_monitor.png" alt="训练监控">
+    <div class="img-caption">BC-MARL / Pure-MARL / Selfish 训练奖励与合作率监控（3000 回合，诚实口径）</div>
   </div>
 </div>
 
 <!-- 对比分析 -->
 <div class="tab-content" id="tab-2">
   <div class="info-box">Welch t-test：BC-MARL vs Pure-MARL <strong>p=0.126（未达显著，n=22，Cohen's d=0.47）</strong>；合作率两组收敛后均约 69.5%，无差异。— 方向一致但不显著，如实呈现。</div>
-  <div class="section-title">三模式奖励对比</div>
+  <div class="section-title">对比分析面板</div>
   <div class="img-container">
-    <img src="images/reward_comparison_bar.png" alt="奖励对比">
-    <div class="img-caption">⚠️ 历史图示（V2 集成版，1000 回合，total_reward 口径，BC 提升 29.6%）：<strong>非当前头号口径</strong>（+29.2% / n=22 / env_reward / p=0.126 不显著），仅作版本沿革展示。</div>
-  </div>
-  <div class="section-title">排行榜</div>
-  <div class="img-container">
-    <img src="images/leaderboard.png" alt="排行榜">
-    <div class="img-caption">智能体贡献度排行榜</div>
+    <img src="images/dashboard_compare.png" alt="对比分析">
+    <div class="img-caption">bc_marl vs pure_marl 奖励/合作率对比（3000 回合收敛，诚实口径）</div>
   </div>
 </div>
 
@@ -119,30 +105,16 @@
     <tr><td><strong>BC-MARL</strong></td><td><strong>-6.12 ± 5.47</strong></td><td>69.5% ± 2.6%</td><td>0%</td><td><span class="badge badge-green">基准（n=22）</span></td></tr>
     <tr><td>Pure-MARL</td><td>-8.64 ± 5.24</td><td>69.5% ± 1.9%</td><td>0%</td><td><span class="badge badge-gray">p=0.126 不显著</span></td></tr>
   </table>
-  <div class="info-box">对照口径（非头号）：V3.7（500 回合未收敛）env_reward +13.4%；V2（1000 回合）total_reward +29.6%（含 BC 激励）。</div>
-  <div class="section-title">三模式对比图</div>
-  <div class="img-container">
-    <img src="images/three_mode_comparison.png" alt="三模式对比">
-    <div class="img-caption">⚠️ 历史图示（V2 集成版，1000 回合）：三模式训练效果综合对比，<strong>非当前头号口径</strong>。</div>
-  </div>
-  <div class="section-title">详细对比</div>
-  <div class="img-container">
-    <img src="images/dashboard_compare.png" alt="对比分析">
-    <div class="img-caption">Dashboard 对比分析面板</div>
-  </div>
+  <div class="info-box">对照口径（非头号）：V3.7（500 回合未收敛）env_reward +13.4% 仅作版本沿革说明，不作为申报口径。</div>
+  <div class="section-title">三模式对比面板</div>
   <div class="img-container">
     <img src="images/dashboard_tri.png" alt="三模式对比">
-    <div class="img-caption">Dashboard 三模式对比面板</div>
+    <div class="img-caption">Dashboard 三模式对比面板（诚实口径）</div>
   </div>
 </div>
 
 <!-- 区块链 -->
 <div class="tab-content" id="tab-4">
-  <div class="section-title">区块链流水线统计</div>
-  <div class="img-container">
-    <img src="images/blockchain_pipeline_stats.png" alt="流水线统计">
-    <div class="img-caption">ECDSA 签名 → SecurityGuard → Transaction → Block → CW-PBFT 共识 → 链式追加（流水线统计为 V2 单次运行示例）</div>
-  </div>
   <div class="section-title">Dashboard 区块链面板</div>
   <div class="img-container">
     <img src="images/dashboard_blockchain.png" alt="区块链面板">
@@ -151,7 +123,7 @@
   <div class="section-title">ECDSA 安全验证测试结果</div>
   <div class="img-container">
     <img src="images/security_test_results.png" alt="安全测试">
-    <div class="img-caption">消息篡改与身份伪造攻击拦截效果（100% 拦截）</div>
+    <div class="img-caption">消息篡改与身份伪造攻击拦截效果（开启验签后 100% 拦截；关闭验签则被突破）</div>
   </div>
 </div>
 
@@ -184,7 +156,7 @@
 </div>
 
 <footer>
-  MARL-ECDSA 共识链 v4.1 | CCF 第五届区块链竞赛 · 国赛演示平台 | 面向多智能体强化学习的区块链 AI 协同共识机制
+  MARL-ECDSA 共识链 v4.2 | CCF 第五届区块链竞赛 · 国赛演示平台 | 面向多智能体强化学习的区块链 AI 协同共识机制
 </footer>
 
 <script>
