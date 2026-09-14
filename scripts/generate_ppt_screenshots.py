@@ -57,8 +57,8 @@ ax.axis('off')
 
 # 数据卡片
 metrics = [
-    ('BC 整体提升', '+40.6%', '#22c55e'),
-    ('总训练回合', '1000', '#3b82f6'),
+    ('BC env_reward 提升', '+29.2%', '#22c55e'),
+    ('总训练回合', '3000', '#3b82f6'),
     ('协同智能体数', '3', '#f59e0b'),
 ]
 for i, (label, value, color) in enumerate(metrics):

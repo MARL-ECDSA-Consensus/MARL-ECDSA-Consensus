@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-1575%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-1574%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **English**: [README.md](README.md)
@@ -37,7 +37,7 @@
 - **Nash 均衡形式化证明**：严格证明 + 参数边界 + 50% 安全裕度；后量子 Dilithium 适配器，零 API 变更迁移。
 - **自研 Gossip 动态节点发现**：基于 asyncio，针对 MARL 场景优化。
 - **全链路密码学可审计**：签名 → 防护 → 交易 → 区块 → 共识。
-- **严谨实验体系**：消融矩阵 + λ 敏感度 + 多种子统计（p < 0.001）。
+- **严谨实验体系**：消融矩阵 + λ 敏感度 + 多种子统计，**按诚实口径呈现**（头号指标：n=22 种子，p=0.126 —— 方向一致但**未达统计显著**；详见[实验结果](#-实验结果)）。
 
 ---
 
@@ -74,7 +74,7 @@
 | 后量子兼容（Dilithium） | ❌ 无 | ✅ 适配器，零 API 变更 |
 | Gossip 动态发现 | ⚠ libp2p 仅通用 | ✅ 自研 + asyncio + MARL 优化 |
 | 全链路密码学可审计 | ❌ 无 | ✅ 签名→防护→交易→区块→共识 |
-| 消融 + λ + 多种子统计 | ⚠ 部分 | ✅ 完整矩阵，p < 0.001 |
+| 消融 + λ + 多种子统计 | ⚠ 部分 | ✅ 完整矩阵，诚实口径报告 |
 
 ---
 
@@ -84,7 +84,7 @@
 # 1. 安装依赖（Python 3.11+）
 pip install -r requirements.txt
 
-# 2. 运行全量测试（435 项）
+# 2. 运行全量测试（1574 passed / 1 skipped）
 python -m pytest tests/ -q
 
 # 3. 运行训练实验（pure / bc / selfish）
@@ -95,7 +95,7 @@ python -c "from visualization.dashboard import start_dashboard; start_dashboard(
 # 打开 http://127.0.0.1:9090
 
 # 5. 运行攻防演示（4 类攻击）
-python attack_defense_demo.py
+python scripts/legacy/analysis/attack_defense_demo.py
 ```
 
 ### 多共识模式切换
@@ -106,16 +106,20 @@ python attack_defense_demo.py
 
 ## 📊 实验结果
 
-| 模式 | 平均奖励 | 后50回合 | 合作率 | 背叛率 | 显著性 |
-|---|---|---|---|---|---|
-| **BC-MARL** | **-31.0 ± 1.4** | -20.8 ± 8.2 | 54.4% | 0% | 基线 |
-| Pure-MARL | -52.2 ± 0.9 | -41.4 ± 5.0 | 51.4% | 0% | p < 0.000001 |
-| Selfish | -51.5 ± 1.4 | -40.2 ± 5.1 | 34.9% | 33.3% | p < 0.000001 |
+**头号指标（诚实口径）**：3000 回合充分收敛后，BC-MARL 相比 Pure-MARL 的**纯环境奖励（`env_reward`，不含 BC 激励）**提升 **+29.2%**。该结果基于**每组 n=22 个独立随机种子**；Welch **p=0.126 → 未达统计显著**，Cohen's **d=0.47**（小到中等效应）。效应方向稳定为正，但在此样本量下差异**不显著**，我们如实呈现。
 
-- **BC 整体提升**：较 Pure-MARL 提升 +40.6%（5 种子，p < 0.001）
-- **抗背叛**：区块链激励抑制自私背叛（合作率 34.9% 回升至 54.4%）
-- **CW-PBFT vs PBFT**：33% 拜占庭比例下共识成功率 +10–23%
-- **攻击防御**：观测伪造 / 消息篡改 / 重放 / 拜占庭主节点 100% 拦截
+| 模式 | env_reward 后50回合（均值 ± 标准差） | 收敛后合作率 | 种子数 | Welch p |
+|---|---|---|---|---|
+| **BC-MARL** | **-6.12 ± 5.47** | 69.5% ± 2.6% | 22 | （基准） |
+| Pure-MARL | -8.64 ± 5.24 | 69.5% ± 1.9% | 22 | 0.126（不显著） |
+
+- **BC vs Pure（`env_reward`）**：相对提升 +29.2%，**n=22，p=0.126 —— 方向一致但未达显著**（种子方差 sd≈5.5 限制了检验力）。
+- **对照口径（非头号）**：V3.7（500 回合，未收敛）env_reward +13.4%；V2（1000 回合）total_reward +29.6%（含 BC 激励）。
+- **抗背叛**：BC 激励与惩罚设计使背叛率保持 0%，避免背叛崩溃。
+- **CW-PBFT vs PBFT**：33% 拜占庭比例下共识成功率 +10–23%。
+- **攻击防御**：观测伪造 / 消息篡改 / 重放 / 拜占庭主节点 100% 拦截。
+
+> **项目定位**：MARL-ECDSA 共识链的价值主张是 **信任增强** —— 拜占庭容错共识、密码学身份锚定、四类攻击 100% 拦截、激励公平可验证，而非强化学习性能优化。BC 对环境奖励的增益为**正向趋势但统计不显著**，我们如实报告。
 
 ---
 
@@ -134,8 +138,8 @@ marl-ecdsa-consensus-chain/
 │   ├── envs/         # SimpleSpread 环境
 │   └── integration/  # 桥接、自私智能体、合作检测、自适应 λ
 ├── visualization/    # Flask 可视化面板（攻防演示、共识动画）
-├── scripts/          # export_dataset.py、benchmark、一键启动脚本
-├── tests/            # 435 项测试
+├── scripts/          # export_dataset.py、benchmark、ablation、一键启动脚本
+├── tests/            # 142 个测试模块（1574 passed / 1 skipped）
 └── docs/             # 验证与覆盖文档
 ```
 
@@ -143,7 +147,7 @@ marl-ecdsa-consensus-chain/
 
 ## 🧪 测试
 
-- **435 项测试**，覆盖 24 个测试模块：共识、密码学安全（RFC 6979、k 值重用、重放）、区块链、MARL 集成、P2P 网络、Dashboard 攻防 API。
+- **1574 passed / 1 skipped / 0 failed**（共收集 1575 项），覆盖 142 个测试模块：共识、密码学安全（RFC 6979、k 值重用、重放）、区块链、MARL 集成、P2P 网络、Dashboard 攻防 API。
 - 静态检查：`python -m compileall -q blockchain/ marl/ visualization/`。
 
 ---
@@ -152,7 +156,7 @@ marl-ecdsa-consensus-chain/
 
 | 工作流 | 触发 | 用途 |
 |---|---|---|
-| `ci.yml` | push / PR / 每日 cron `15 2 * * *` | 跑 435 项测试（py3.11/3.12）+ 追加审查日志 |
+| `ci.yml` | push / PR / 每日 cron `15 2 * * *` | 跑全量测试（py3.11/3.12）+ 追加审查日志 |
 | `hourly-heartbeat.yml` | cron `0 * * * *` / 手动 | 每小时活动心跳日志 |
 | `daily-contribution.yml` | cron `30 1 * * *` | 每日活动提交 |
 

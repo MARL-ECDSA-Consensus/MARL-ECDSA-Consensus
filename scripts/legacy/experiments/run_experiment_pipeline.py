@@ -3,7 +3,7 @@
 
 一键运行全部实验并生成竞赛报告:
     python run_experiment_pipeline.py --quick   # 快速模式（200回合×3种子）
-    python run_experiment_pipeline.py --full    # 完整模式（1000回合×5种子）
+    python run_experiment_pipeline.py --full    # 完整模式（500回合×5种子）
 """
 
 # ===== 自动注入: 仓库根路径 (legacy 移动兼容) =====

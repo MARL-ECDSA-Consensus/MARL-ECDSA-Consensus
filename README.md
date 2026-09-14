@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-1575%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-1574%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **中文版**: [README.zh.md](README.zh.md)
@@ -37,7 +37,7 @@
 - **Formal Nash equilibrium proof**: strict proof with parameter bounds and 50% safety margin; post-quantum Dilithium adapter with zero-API-change migration.
 - **Self-built Gossip discovery**: asyncio-based dynamic peer discovery tuned for MARL scenarios.
 - **Full-chain cryptographic auditability**: sign → Guard → Tx → Block → consensus.
-- **Rigorous experiments**: ablation matrix, λ-sensitivity, multi-seed statistics (p < 0.001).
+- **Rigorous experiments**: ablation matrix, λ-sensitivity and multi-seed statistics, reported under an honest caliber (headline: n=22 seeds, p=0.126 — direction-consistent but **not significant**; see [Experiments & Results](#-experiments--results)).
 
 ---
 
@@ -74,7 +74,7 @@ Data flow: `ECDSA sign → SecurityGuard check → Transaction → Block → CW-
 | Post-quantum (Dilithium) | ❌ none | ✅ adapter, zero API change |
 | Gossip dynamic discovery | ⚠ libp2p only, MARL-unrelated | ✅ self-built + asyncio + MARL-tuned |
 | Full-chain crypto auditability | ❌ none | ✅ sign→Guard→Tx→Block→consensus |
-| Ablation + λ + multi-seed stats | ⚠ partial | ✅ full matrix, p < 0.001 |
+| Ablation + λ + multi-seed stats | ⚠ partial | ✅ full matrix, honest reporting |
 
 ---
 
@@ -84,7 +84,7 @@ Data flow: `ECDSA sign → SecurityGuard check → Transaction → Block → CW-
 # 1. Install dependencies (Python 3.11+)
 pip install -r requirements.txt
 
-# 2. Run full test suite (435 tests)
+# 2. Run full test suite (1574 passed / 1 skipped)
 python -m pytest tests/ -q
 
 # 3. Run a training experiment (pure vs bc vs selfish)
@@ -95,7 +95,7 @@ python -c "from visualization.dashboard import start_dashboard; start_dashboard(
 # open http://127.0.0.1:9090
 
 # 5. Run the attack-defense demo (4 attack types)
-python attack_defense_demo.py
+python scripts/legacy/analysis/attack_defense_demo.py
 ```
 
 ### Multi-consensus mode switching
@@ -106,16 +106,20 @@ Set `consensus_mode` in `config.json`: `cw_pbft` (default) / `standard_pbft` / `
 
 ## 📊 Experiments & Results
 
-| Mode | Mean Reward | Last-50 | Cooperation | Betrayal | Significance |
-|---|---|---|---|---|---|
-| **BC-MARL** | **-31.0 ± 1.4** | -20.8 ± 8.2 | 54.4% | 0% | baseline |
-| Pure-MARL | -52.2 ± 0.9 | -41.4 ± 5.0 | 51.4% | 0% | p < 0.000001 |
-| Selfish | -51.5 ± 1.4 | -40.2 ± 5.1 | 34.9% | 33.3% | p < 0.000001 |
+**Headline metric (honest caliber).** After **3000-episode** full convergence, BC-MARL improves the **pure environment reward (`env_reward`, excluding the BC incentive)** by **+29.2%** over Pure-MARL. This is based on **n = 22 independent random seeds per group**; Welch **p = 0.126 → not statistically significant**, Cohen's **d = 0.47** (small-to-medium). The direction is consistently positive, but the difference is **not significant** at this sample size — reported as such.
 
-- **BC overall improvement**: +40.6% vs Pure-MARL (5 seeds, p < 0.001)
-- **Anti-betrayal**: blockchain incentive suppresses selfish betrayal (34.9% → 0% cooperation gap restored)
-- **CW-PBFT vs PBFT**: +10–23% consensus success at 33% Byzantine ratio
-- **Attack defense**: 100% interception for observation forgery / message tampering / replay / Byzantine primary
+| Mode | env_reward last-50 (mean ± std) | Post-convergence coop. | Seeds | Welch p |
+|---|---|---|---|---|
+| **BC-MARL** | **-6.12 ± 5.47** | 69.5% ± 2.6% | 22 | (baseline) |
+| Pure-MARL | -8.64 ± 5.24 | 69.5% ± 1.9% | 22 | 0.126 (n.s.) |
+
+- **BC vs Pure (`env_reward`)**: +29.2% relative, **n=22, p=0.126 — direction-consistent but not significant** (test power limited by seed variance, sd ≈ 5.5).
+- **Reference calibers (not headline)**: V3.7 (500 episodes, not converged) env_reward +13.4%; V2 (1000 episodes) total_reward +29.6% (includes the BC incentive).
+- **Anti-betrayal**: the BC incentive and penalty design hold the betrayal rate at 0% and prevent defection collapse.
+- **CW-PBFT vs PBFT**: +10–23% consensus success at a 33% Byzantine ratio.
+- **Attack defense**: 100% interception for observation forgery / message tampering / replay / Byzantine primary.
+
+> **Positioning**: the value proposition is **trust augmentation** — Byzantine-fault-tolerant consensus, cryptographic identity anchoring, 100% attack interception and verifiable incentive fairness — rather than RL performance optimization. The BC effect on `env_reward` is a positive trend that is **not statistically significant**, and we report it honestly.
 
 ---
 
@@ -134,8 +138,8 @@ marl-ecdsa-consensus-chain/
 │   ├── envs/         # SimpleSpread
 │   └── integration/  # Bridge, SelfishAgent, CooperationDetector, AdaptiveLambda
 ├── visualization/    # Flask Dashboard (attack demo, consensus animation)
-├── scripts/          # export_dataset.py, benchmark, one-click launchers
-├── tests/            # 435 test cases
+├── scripts/          # export_dataset.py, benchmark, ablation, one-click launchers
+├── tests/            # 142 test modules (1574 passed / 1 skipped)
 └── docs/             # Verification & coverage docs
 ```
 
@@ -143,7 +147,7 @@ marl-ecdsa-consensus-chain/
 
 ## 🧪 Testing
 
-- **435 tests** across 24 test modules: consensus, crypto security (RFC 6979, k-reuse, replay), blockchain, MARL integration, P2P network, dashboard attack API.
+- **1574 tests passed / 1 skipped / 0 failed** (1575 collected) across 142 test modules: consensus, crypto security (RFC 6979, k-reuse, replay), blockchain, MARL integration, P2P network, dashboard attack API.
 - Static checks: `python -m compileall -q blockchain/ marl/ visualization/`.
 
 ---
@@ -152,15 +156,13 @@ marl-ecdsa-consensus-chain/
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push / PR / daily cron `15 2 * * *` | Run 435 tests (py3.11/3.12) + append review log |
+| `ci.yml` | push / PR / daily cron `15 2 * * *` | Run the full test suite (py3.11/3.12) + append review log |
 | `hourly-heartbeat.yml` | cron `0 * * * *` / manual | Hourly activity heartbeat log |
 | `daily-contribution.yml` | cron `30 1 * * *` | Daily activity commit |
 
 ---
 
 ## 📖 Citation
-
-If you use this project in research, please cite:
 
 ```bibtex
 @misc{marl-ecdsa-consensus-chain,
@@ -174,4 +176,4 @@ If you use this project in research, please cite:
 
 ## 📄 License
 
-Released under the [MIT License](LICENSE).
+This project is released under the [MIT License](LICENSE).

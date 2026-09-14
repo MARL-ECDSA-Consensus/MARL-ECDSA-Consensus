@@ -160,7 +160,7 @@ def generate_lambda_report(all_results, n_agents, n_episodes, output_dir):
 ### Statistical Significance
 - All λ > 0 values tested show improvement over λ = 0.0 (pure MARL baseline)
 - λ ∈ [0.3, 0.8] consistently provides the best trade-off between total and env reward
-- λ = 0.5 recommended as competition baseline (balanced across all metrics)
+- λ ∈ [0.3, 0.8] gives a balanced trade-off; the frozen competition config uses λ = 0.1 (see config.json)
 
 ## 3. Parameter Robustness Conclusion
 
@@ -276,7 +276,7 @@ def main():
             means = [np.mean(by_lam[l]["total"]) for l in lams]
             stds = [np.std(by_lam[l]["total"]) for l in lams]
             axes[0].errorbar(lams, means, yerr=stds, marker='o', capsize=5, color='#1A365D')
-            axes[0].axvline(x=0.5, color='#38A169', linestyle='--', label='Recommended λ=0.5')
+            axes[0].axvline(x=0.5, color='#38A169', linestyle='--', label='λ=0.5 (sweep reference)')
             axes[0].set_xlabel('λ')
             axes[0].set_ylabel('Total Reward')
             axes[0].set_title('Total Reward vs λ')

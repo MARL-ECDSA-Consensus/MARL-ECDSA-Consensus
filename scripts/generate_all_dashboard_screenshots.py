@@ -44,6 +44,46 @@ if bc and not bc.get('episodes_rewards'):
 if selfish and not selfish.get('episodes_rewards'):
     selfish = load_json('smoke_test_results.json') or selfish
 
+# ---- 回退数据源：results/convergence_3000 聚合（诚实口径，n=22 收敛验证）----
+def _agg_convergence(prefix):
+    """把 results/convergence_3000/<prefix>_seed*.json 逐回合聚合为一条平均曲线。"""
+    import glob as _glob
+    fs = sorted(_glob.glob(str(BASE / 'results' / 'convergence_3000' / (prefix + '_seed*.json'))))
+    if not fs:
+        return None
+    bucket = {}
+    for f in fs:
+        try:
+            d = json.load(open(f, encoding='utf-8'))
+        except Exception:
+            continue
+        for k in ('episode_rewards', 'env_rewards', 'cooperation_rates', 'betrayal_rates', 'losses'):
+            if isinstance(d.get(k), list) and d[k]:
+                bucket.setdefault(k, []).append([v for v in d[k] if v is not None])
+    if not bucket:
+        return None
+    out = {}
+    for k, arrs in bucket.items():
+        L = min(len(a) for a in arrs)
+        if L == 0:
+            continue
+        out[k] = [float(np.mean([a[i] for a in arrs])) for i in range(L)]
+    return {
+        'episodes_rewards': out.get('episode_rewards', []),
+        'cooperation_rates': out.get('cooperation_rates', []),
+        'betrayal_rates': out.get('betrayal_rates', []),
+        'losses': out.get('losses', []),
+    }
+
+if not (pure and pure.get('episodes_rewards')):
+    _p = _agg_convergence('pure_marl')
+    if _p:
+        pure = _p
+if not (bc and bc.get('episodes_rewards')):
+    _b = _agg_convergence('bc_marl')
+    if _b:
+        bc = _b
+
 # 统一提取奖励数据
 pure_rewards = pure.get('episodes_rewards', pure.get('episode_rewards', [])) if pure else []
 bc_rewards = bc.get('episodes_rewards', bc.get('episode_rewards', [])) if bc else []
@@ -75,8 +115,8 @@ ax.text(7, 6.0, 'Blockchain-AI Collaborative Consensus for Multi-Agent Reinforce
 
 # 数据卡片
 metrics = [
-    ('+40.6%', 'BC 整体提升', '#22c55e'),
-    ('1000', '总训练回合', '#3b82f6'),
+    ('+29.2%', 'BC env_reward 提升', '#22c55e'),
+    ('3000', '总训练回合', '#3b82f6'),
     ('3', '协同智能体数', '#f59e0b'),
     ('1,000', 'CW-PBFT 共识轮次', '#818cf8'),
 ]
@@ -103,10 +143,10 @@ for j, h in enumerate(headers):
 
 # 数据行
 rows = [
-    ['平均奖励', '-52.2±0.9', '-31.0±1.4', '-51.5±1.4', '+40.6%'],
-    ['后50回合均奖', '-41.4±5.0', '-20.8±8.2', '-40.2±5.1', '+49.8%'],
-    ['合作率', '51.4%', '54.4%', '34.9%', '+5.8%'],
-    ['t-test p-value', '<0.000001', '-', '-', '高度显著'],
+    ['后50回合 env_reward', '-8.64±5.24', '-6.12±5.47', '—', '+29.2%'],
+    ['合作率(收敛后)', '69.5%', '69.5%', '—', '+0.0pp'],
+    ['背叛率', '0%', '0%', '—', '—'],
+    ['Welch p-value', '0.126', '-', '-', '不显著(n=22)'],
 ]
 for i, row in enumerate(rows):
     y = 1.8 - i * 0.35
@@ -122,7 +162,7 @@ for i, row in enumerate(rows):
         ax.text(x, y, val, fontsize=9, ha='center', va='center', color=color)
 
 # 底部提示
-ax.text(7, 0.2, '注：数据基于 5 种子 × 1000 回合 统一实验（λ=0.1）', fontsize=8, 
+ax.text(7, 0.2, '注：数据基于 22 种子 × 3000 回合 收敛验证（env_reward 公平口径，Welch p=0.126 不显著）', fontsize=8, 
         color='#64748b', ha='center', va='center')
 
 fig.savefig(OUT / 'dashboard_overview.png', dpi=150, bbox_inches='tight', facecolor='#040810')
@@ -214,9 +254,9 @@ ax.text(7, 7.5, '对比分析 — Pure MARL vs BC-MARL', fontsize=18, fontweight
 
 # 三列卡片
 cards = [
-    ('Pure MARL', '-52.2', '#ef4444', ['无区块链激励', '纯环境奖励驱动', '信用分配困难', '收敛较慢']),
-    ('BC-MARL', '-31.0', '#22c55e', ['ECDSA签名认证', 'CW-PBFT共识', '贡献度加权奖励', '收敛显著加快']),
-    ('Selfish', '-51.5', '#f59e0b', ['部分智能体背叛', '区块链惩罚背叛', '激励抑制自私', '系统鲁棒性验证']),
+    ('Pure MARL', '-8.64', '#ef4444', ['无区块链激励', '纯环境奖励驱动', '信用分配困难', '收敛较慢']),
+    ('BC-MARL', '-6.12', '#22c55e', ['ECDSA签名认证', 'CW-PBFT共识', '贡献度加权奖励', '协作塑形趋势']),
+    ('Selfish(对照)', '—', '#f59e0b', ['部分智能体背叛', '区块链惩罚背叛', '激励抑制自私', '系统鲁棒性验证']),
 ]
 for i, (title, reward, color, features) in enumerate(cards):
     x = 2.3 + i * 4.0
@@ -228,7 +268,7 @@ for i, (title, reward, color, features) in enumerate(cards):
     ax.text(x, 5.8, title, fontsize=14, ha='center', va='center', fontweight='bold', color=color)
     # 奖励值
     ax.text(x, 5.2, reward, fontsize=28, ha='center', va='center', fontweight='bold', color=color)
-    ax.text(x, 4.7, '平均奖励', fontsize=9, ha='center', va='center', color='#94a3b8')
+    ax.text(x, 4.7, '后50回合 env_reward', fontsize=9, ha='center', va='center', color='#94a3b8')
     # 特性列表
     for j, feat in enumerate(features):
         ax.text(x, 4.0 - j*0.4, f'• {feat}', fontsize=9, ha='center', va='center', color='#cbd5e1')
@@ -247,17 +287,17 @@ fig.patch.set_facecolor('#040810')
 
 ax.text(7, 7.5, '三模式训练对比 — 详细数据', fontsize=18, fontweight='bold', color='#f1f5f9', ha='center')
 
-# 柱状图模拟
-modes = ['Pure\nMARL', 'BC-MARL', 'Selfish']
-means = [-52.2, -31.0, -51.5]
-stds = [0.9, 1.4, 1.4]
-colors_bar = ['#ef4444', '#22c55e', '#f59e0b']
+# 柱状图模拟（诚实口径：仅 BC / Pure 具备 n=22 收敛数据）
+modes = ['Pure\nMARL', 'BC-MARL']
+means = [-8.64, -6.12]
+stds = [5.24, 5.47]
+colors_bar = ['#ef4444', '#22c55e']
 
 # 绘制柱状图（手动matplotlib style）
-bars_x = [3.5, 7, 10.5]
+bars_x = [5, 9]
 for x, mean, std, color in zip(bars_x, means, stds, colors_bar):
     # 柱子
-    h = abs(mean) / 60 * 4  # 归一化高度
+    h = abs(mean) / 10 * 4  # 归一化高度（env_reward 量级）
     rect = mpatches.FancyBboxPatch((x-0.6, 2), 1.2, h, boxstyle="round,pad=0.05",
                                     facecolor=color, alpha=0.3, edgecolor=color, linewidth=2)
     ax.add_patch(rect)
@@ -267,16 +307,14 @@ for x, mean, std, color in zip(bars_x, means, stds, colors_bar):
 
 # Y轴标签
 for y in range(2, 7):
-    val = -(y-2) / 4 * 60
+    val = -(y-2) / 4 * 10
     ax.text(1.2, y, f'{val:.0f}', fontsize=8, color='#64748b', ha='right', va='center')
     ax.plot([1.4, 1.5], [y, y], color='#334155', linewidth=0.5)
 ax.text(0.5, 4.5, '平均奖励', fontsize=9, color='#64748b', ha='center', va='center', rotation=90)
 
-# 统计显著性标注
-ax.annotate('', xy=(7, 6.5), xytext=(3.5, 6.5), arrowprops=dict(arrowstyle='->', color='#22c55e', lw=1.5))
-ax.text(5.25, 6.7, 'p < 0.000001', fontsize=10, ha='center', color='#22c55e', fontweight='bold')
-ax.annotate('', xy=(10.5, 6.5), xytext=(7, 6.5), arrowprops=dict(arrowstyle='->', color='#f59e0b', lw=1.5))
-ax.text(8.75, 6.7, 'p < 0.000001', fontsize=10, ha='center', color='#f59e0b', fontweight='bold')
+# 统计显著性标注（诚实口径）
+ax.annotate('', xy=(9, 6.5), xytext=(5, 6.5), arrowprops=dict(arrowstyle='->', color='#22c55e', lw=1.5))
+ax.text(7, 6.7, 'Welch p=0.126 (n=22, 不显著)', fontsize=10, ha='center', color='#22c55e', fontweight='bold')
 
 fig.savefig(OUT / 'dashboard_tri.png', dpi=150, bbox_inches='tight', facecolor='#040810')
 plt.close()
@@ -331,6 +369,7 @@ for i, (label, val, color) in enumerate(badges):
     ax.text(x, 2.7, label, fontsize=9, ha='center', va='center', color='#cbd5e1')
     ax.text(x, 2.3, val, fontsize=10, ha='center', va='center', fontweight='bold', color=color)
 
+ax.text(7, 0.8, '注：流水线统计为 V2（1000 回合，λ=0.1）单次运行示例', fontsize=8, color='#64748b', ha='center')
 fig.savefig(OUT / 'dashboard_blockchain.png', dpi=150, bbox_inches='tight', facecolor='#040810')
 plt.close()
 
