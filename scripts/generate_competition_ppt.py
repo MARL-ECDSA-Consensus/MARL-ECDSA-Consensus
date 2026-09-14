@@ -57,7 +57,7 @@ def create_presentation():
         ("innovation1", "创新一：无CA分布式ECDSA身份锚定", create_ecdsa_slide),
         ("innovation2", "创新二：CW-PBFT贡献加权共识", create_cwpbft_slide),
         ("innovation3", "创新三：Nash均衡激励相容证明", create_nash_slide),
-        ("experiment1", "实验一：核心对比（+53.1% env_reward 公平口径）", create_exp1_slide),
+        ("experiment1", "实验一：核心对比（+29.2% env_reward 公平口径）", create_exp1_slide),
         ("experiment2", "实验二：消融实验与安全攻防", create_exp2_slide),
         ("experiment3", "实验三：扩展性与自适应λ", create_exp3_slide),
         ("dashboard", "Web监控平台实时演示", create_dashboard_slide),
@@ -202,9 +202,9 @@ def create_solution_slide(slide, title):
         font_size=16
     )
     # Metric cards
-    _add_metric_card(slide, "env_reward提升", "+53.1%", 0.8, 4.5)
+    _add_metric_card(slide, "env_reward提升", "+29.2%", 0.8, 4.5)
     _add_metric_card(slide, "攻击拦截率", "100%", 3.6, 4.5)
-    _add_metric_card(slide, "Cohen's d", "2.03", 6.4, 4.5)
+    _add_metric_card(slide, "Cohen's d", "0.47", 6.4, 4.5)
     _add_metric_card(slide, "区块链开销", "<5%", 9.2, 4.5)
 
 
@@ -252,7 +252,7 @@ def create_nash_slide(slide, title):
     _add_title_bar(slide, title)
     _add_body_text(slide,
         "定理：当λ ≥ 0.0667且β ≥ 2.0时，合作(C)是严格优势策略，(C,C)是唯一Nash均衡\n\n"
-        "收益矩阵（λ=0.5, β=2.0）：\n"
+        "收益矩阵（λ=0.1, β=2.0）：\n"
         "                  对方合作(C)        对方背叛(D)\n"
         "  我合作(C)       +10.00  ✅          +7.00\n"
         "  我背叛(D)        -4.00              -9.00\n\n"
@@ -261,7 +261,7 @@ def create_nash_slide(slide, title):
         "  U(C,D)= +7 > U(D,D)=-9  ✓\n\n"
         "参数边界：\n"
         "  λ_min = env_betrayal/Δ_bc = 2/30 = 0.0667\n"
-        "  当前λ=0.5 >> 0.0667 | 安全裕度 = 650%\n\n"
+        "  当前λ=0.1 > λ_min=0.0667（1.5倍）| 合作优势 margin=13.0 | 安全裕度 = 50%\n\n"
         "结论：BC激励机制使合作从囚徒困境的劣势策略变为严格优势策略",
         font_size=14
     )
@@ -271,17 +271,18 @@ def create_exp1_slide(slide, title):
     """P7: Core experiment results."""
     _add_title_bar(slide, title)
     _add_body_text(slide,
-        "实验设置：SimpleSpreadEnv | IQL算法 | 3种子×3000回合 | λ=0.1 (env_reward公平口径)\n\n"
+        "实验设置：SimpleSpreadEnv | IQL算法 | 22种子/组×3000回合 | λ=0.1 (env_reward公平口径)\n\n"
         "┌──────────┬──────────────┬──────────────┬──────────┬───────────┐\n"
         "│ 训练回合  │    模式      │ env_reward   │ 合作率    │  BC提升    │\n"
         "├──────────┼──────────────┼──────────────┼──────────┼───────────┤\n"
-        "│  3000    │  bc_marl     │ -5.29±2.36   │ 62.0%    │ +53.1% 🔥 │\n"
-        "│  3000    │  pure_marl   │ -11.27±2.45  │ 61.0%    │    —      │\n"
+        "│  3000    │  bc_marl     │ -6.11±5.47   │ 69.5%    │ +29.2%    │\n"
+        "│  3000    │  pure_marl   │ -8.64±5.24   │ 69.5%    │    —      │\n"
         "│   500    │  bc_marl(n3) │ -54.75±—     │ 46.3%    │  -0.5%    │\n"
         "│   500    │  pure(n3)    │ -54.50±—     │ 47.6%    │    —      │\n"
         "└──────────┴──────────────┴──────────────┴──────────┴───────────┘\n\n"
-        "统计显著性：Welch's t-test | bc vs pure | p=0.068 (边际) | Cohen's d=2.03 (巨大效应)\n"
-        "核心发现：3000回合收敛后BC激励效果显著放大(+53.1%)，500回合未收敛时差异不显著\n\n"
+        "统计显著性：Welch's t-test | bc vs pure | p=0.126 (不显著) | Cohen's d=0.47 (小到中等效应)\n"
+        "核心发现：3000回合收敛后BC组优于 Pure 组(+29.2%)，500回合未收敛时差异不显著\n"
+        "⚠️ 诚实声明：效应方向稳定为正，但 p=0.126 未达统计显著，定位「方向一致、检验力不足」\n\n"
         "注：上表为正式实验指标（3000ep真实收敛数据）。Dashboard 演示用的是 1000ep 模拟数据\n"
         "（results/legacy_json/），仅用于可视化趋势展示，绝对数值与正式指标不同，以本表为准。",
         font_size=13
@@ -369,11 +370,11 @@ def create_summary_slide(slide, title):
     _add_title_bar(slide, title)
     _add_body_text(slide,
         "核心成果：\n"
-        "✅ env_reward提升 +53.1%（3000回合收敛，公平口径）\n"
+        "✅ env_reward提升 +29.2%（3000回合收敛，22种子/组，公平口径）\n"
         "✅ 四类安全攻击拦截率100%（消息篡改/身份伪造/k值重用/拜占庭）\n"
-        "✅ Nash均衡数学证明合作是严格优势策略（安全裕度650%）\n"
-        "✅ Welch t检验 p=0.068 边际显著 | Cohen's d=2.03 巨大效应\n"
-        "✅ 300+源文件 | 312测试用例 | 3大产业场景\n\n"
+        "✅ Nash均衡数学证明合作是严格优势策略（保守假设下安全裕度50%）\n"
+        "✅ Welch t检验 p=0.126（不显著）| Cohen's d=0.47（小到中等效应）｜诚实标注检验力不足\n"
+        "✅ 300+源文件 | 1574测试用例 | 3大产业场景\n\n"
         "未来展望：\n"
         "🔮 后量子ECDSA → CRYSTALS-Dilithium迁移路径\n"
         "🔮 分片共识 → 100+智能体水平扩展（O(n²)→O(k²)）\n"
@@ -423,7 +424,7 @@ Four-layer architecture + Bidirectional empowerment loop
 BC → MARL: total_reward = env + λ·bc
 MARL → BC: behavior → contribution → CW-PBFT weights
 
-Key metrics: +53.1% (env_reward) | 100% | p=0.068, d=2.03 | <5% | 312 tests
+Key metrics: +29.2% (env_reward) | 100% | p=0.126 (not significant), d=0.47 | <5% | 1574 tests
 
 ---
 
@@ -443,14 +444,14 @@ Each 90s
 **Innovation 3**: Nash equilibrium incentive compatibility proof
 - Payoff matrix visualization
 - Strict dominant strategy verification
-- Safety margin: 650%
+- Safety margin: 50% (conservative assumption)
 
 ---
 
 ## Slides 7-9: Experimental Results
 Each 60-90s
 
-**Experiment 1**: Core comparison (+53.1% env_reward improvement, 3000ep convergence)
+**Experiment 1**: Core comparison (+29.2% env_reward improvement, 3000ep, n=22 seeds/group)
 **Experiment 2**: Ablation + security (100% attack interception)
 **Experiment 3**: Scalability + adaptive λ
 

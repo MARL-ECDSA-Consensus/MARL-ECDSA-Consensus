@@ -1270,7 +1270,7 @@ def _get_episode_cooperation(self, agent_id):
 
 **启动方式：** `python start_dashboard.py`  
 **访问地址：** http://127.0.0.1:9090  
-**Python路径：** `C:/Users/Lenovo/.workbuddy/binaries/python/versions/3.13.12/python.exe`
+**Python路径：** `python`（建议使用虚拟环境或系统 Python 3.12+）
 
 ### 7.2 7 标签页功能
 

@@ -211,7 +211,7 @@ def _slide_algorithm(prs):
     """Slide 4: 核心算法"""
     slide = prs.slides.add_slide(prs.slide_layouts[6]); add_slide_bg(slide)
     add_title_box(slide, "核心算法：IQL + 区块链激励融合", "双向协同闭环")
-    add_card(slide, 0.5, 1.5, 4.2, 4.5, "MARL算法（IQL）", ["算法：独立Q学习（IQL）", "网络：MLP hidden=128", "优化器：Adam lr=1e-3", "γ=0.8, batch=64", "ε: 1.0→0.05, decay=5000", "Replay Buffer: 2500", "Target: 软更新 τ=0.01", "", "奖励融合：", "total = env_reward + λ * bc_score", "λ=0.5（竞赛推荐）"], ACCENT_BLUE)
+    add_card(slide, 0.5, 1.5, 4.2, 4.5, "MARL算法（IQL）", ["算法：独立Q学习（IQL）", "网络：MLP hidden=128", "优化器：Adam lr=1e-3", "γ=0.8, batch=64", "ε: 1.0→0.05, decay=5000", "Replay Buffer: 2500", "Target: 软更新 τ=0.01", "", "奖励融合：", "total = env_reward + λ * bc_score", "λ=0.1（定稿配置）"], ACCENT_BLUE)
     add_card(slide, 5.3, 1.5, 4.2, 4.5, "区块链闭环", ["1. ECDSA签名每步动作", "2. SecurityGuard校验安全", "3. Transaction每10步上链", "4. 回合结束Block打包", "5. CW-PBFT共识确认", "6. 激励合约结算贡献度", "7. 权重更新→影响共识投票", "8. bc_score反馈→MARL奖励", "", "形成正向激励循环"], ACCENT_GREEN)
     add_footer(slide)
 
@@ -242,7 +242,7 @@ def _slide_consensus(prs):
 def _slide_results(prs, data):
     """Slide 7: 实验结果"""
     slide = prs.slides.add_slide(prs.slide_layouts[6]); add_slide_bg(slide)
-    add_title_box(slide, "实验结果", "total_reward口径 (λ=0.5, 5 agents, 200回合)")
+    add_title_box(slide, "实验结果", "total_reward口径 (λ=0.1, 5 agents, 200回合)")
     pure = data.get("pure_marl", {}); bc = data.get("bc_marl", {})
     pure_avg = pure.get("summary", {}).get("avg_reward", -56.54)
     bc_avg = bc.get("summary", {}).get("avg_reward", -28.53)
@@ -290,8 +290,8 @@ def _slide_demo(prs):
 def _slide_testing(prs):
     """Slide 11: 测试与验证"""
     slide = prs.slides.add_slide(prs.slide_layouts[6]); add_slide_bg(slide)
-    add_title_box(slide, "测试与验证", "312个单元测试 + 6类测试场景")
-    add_stat_card(slide, 0.5, 1.5, 2.8, 1.5, "312", "单元测试", ACCENT_GREEN)
+    add_title_box(slide, "测试与验证", "1574个单元测试 + 6类测试场景")
+    add_stat_card(slide, 0.5, 1.5, 2.8, 1.5, "1574", "单元测试", ACCENT_GREEN)
     add_stat_card(slide, 3.6, 1.5, 2.8, 1.5, "100%", "通过率", ACCENT_GREEN)
     add_stat_card(slide, 6.7, 1.5, 2.8, 1.5, "6", "测试场景", ACCENT_BLUE)
     add_card(slide, 0.5, 3.3, 9, 3, "测试覆盖范围", ["S1 基线对比：Pure MARL vs BC-MARL（1000/3000回合）", "S2 自私鲁棒性：30%自私智能体下区块链激励效果", "S3 区块链安全：ECDSA签名验签 + SecurityGuard防护", "S4 共识稳定性：CW-PBFT多轮共识 100%成功率", "S5 λ参数敏感性：λ=0.1 vs 0.05 vs 0.3对比", "S6 收敛性分析：3000回合训练收敛曲线", "", "测试模块：ECDSA / SecurityGuard / Block / Blockchain / WorldState / CW-PBFT / IncentiveContract / SimpleSpreadEnv"], ACCENT_GOLD)

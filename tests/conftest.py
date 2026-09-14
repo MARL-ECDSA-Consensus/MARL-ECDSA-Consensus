@@ -10,6 +10,23 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+# 脚本子系统目录：实验/演示/工具脚本迁入 scripts/ 的多个子目录后，
+# 部分测试仍按顶层模块名 import（如 `import run_experiment_pipeline`、
+# `import launch_dashboard`、`import network_demo` 等），会导致单文件执行时
+# ModuleNotFoundError。此处自动把 scripts/ 及其所有含 .py 的子目录加入 sys.path，
+# 使"全量跑"与"单文件跑"行为一致，同时兼容后续新增子目录。
+_SCRIPTS_ROOT = os.path.join(_PROJECT_ROOT, "scripts")
+if os.path.isdir(_SCRIPTS_ROOT):
+    _script_dirs = [_SCRIPTS_ROOT]
+    for _cur, _subdirs, _files in os.walk(_SCRIPTS_ROOT):
+        if "__pycache__" in _cur:
+            continue
+        if any(_f.endswith(".py") for _f in _files):
+            _script_dirs.append(_cur)
+    for _d in reversed(_script_dirs):
+        if _d not in sys.path:
+            sys.path.insert(0, _d)
+
 
 @pytest.fixture(scope="session")
 def ecdsa_utils():

@@ -84,8 +84,8 @@ jobs:
 
       - name: Configure git identity
         run: |
-          git config user.name "TrueFurina"
-          git config user.email "2468001320@qq.com"
+          git config user.name "marl-ecdsa-ci"
+          git config user.email "ci@marl-ecdsa.local"
 
       - name: Append review log entry
         run: |

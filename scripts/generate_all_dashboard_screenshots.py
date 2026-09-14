@@ -122,7 +122,7 @@ for i, row in enumerate(rows):
         ax.text(x, y, val, fontsize=9, ha='center', va='center', color=color)
 
 # 底部提示
-ax.text(7, 0.2, '注：数据基于 5 种子 × 1000 回合 统一实验（λ=0.5）', fontsize=8, 
+ax.text(7, 0.2, '注：数据基于 5 种子 × 1000 回合 统一实验（λ=0.1）', fontsize=8, 
         color='#64748b', ha='center', va='center')
 
 fig.savefig(OUT / 'dashboard_overview.png', dpi=150, bbox_inches='tight', facecolor='#040810')
