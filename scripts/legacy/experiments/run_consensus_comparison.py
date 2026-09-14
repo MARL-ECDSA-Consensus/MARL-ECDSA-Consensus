@@ -1,0 +1,193 @@
+"""
+Tier1: CW-PBFT vs Standard PBFT 对比实验（v3 — 引擎原生拜占庭注入）
+
+P0-D 修复（2026-09-01）：
+- 改用引擎原生 simulated_consensus(byzantine_nodes) 真实注入拜占庭（省略故障模型），
+  不再依赖外部多节点编排，byz_ratio 由共识引擎本身真实消费。
+- 保留 5% 诚实节点消息丢失（HONEST_MSG_LOSS），模拟网络不可靠。
+- 不使用 fast_consensus fallback，真实统计成功率。
+
+核心差异体现：
+- Standard PBFT：需要 2n/3 个节点投票（按节点数），拜占庭/丢包节点不投票 → 难达阈值
+- CW-PBFT：需要 2/3 总权重，高贡献诚实节点权重高 → 少数诚实节点即可达阈值
+"""
+
+# ===== 自动注入: 仓库根路径 (legacy 移动兼容) =====
+import sys as _sys
+from pathlib import Path as _Path
+_REPO_ROOT = str(_Path(__file__).resolve().parent.parent.parent.parent)
+if _REPO_ROOT not in _sys.path:
+    _sys.path.insert(0, _REPO_ROOT)
+# ===== 自动注入结束 =====
+
+import json
+import time
+import random
+import hashlib
+import logging
+import sys
+from pathlib import Path
+from typing import List, Dict, Tuple, Optional, Set
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from blockchain.consensus.cw_pbft import CWPBFTConsensus, ConsensusState, ConsensusVote
+from blockchain.consensus.standard_pbft import StandardPBFTConsensus
+
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger('consensus_compare')
+
+RESULTS_DIR = Path(__file__).parent / 'results' / 'consensus_comparison'
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+NODE_COUNTS = [4, 7, 10, 16]
+BYZANTINE_RATIOS = [0.0, 0.1, 0.2, 0.33, 0.4]
+N_ROUNDS = 200
+HONEST_MSG_LOSS = 0.05  # 5% 消息丢失率（模拟网络不可靠）
+
+
+def simulate_consensus(
+    consensus_class,
+    n_nodes: int,
+    byzantine_ratio: float,
+    n_rounds: int,
+    use_weights: bool = True,
+) -> Dict:
+    """
+    单机引擎原生共识模拟（P0-D 修复版）
+
+    - 用共识引擎自身的 simulated_consensus(byzantine_nodes) 真实注入拜占庭；
+    - 每轮静默节点 = 拜占庭节点 ∪ 5% 消息丢失的诚实节点；
+    - 真实统计共识成功率与延迟。
+    """
+    node_ids = [f'node_{i}' for i in range(n_nodes)]
+    n_byzantine = int(n_nodes * byzantine_ratio)
+    byzantine_ids = set(node_ids[:n_byzantine]) if n_byzantine > 0 else set()
+
+    engine = consensus_class(node_id='node_0', consensus_nodes=node_ids)
+
+    # CW-PBFT：设置差异化权重（高贡献节点更高权重）
+    if use_weights and consensus_class == CWPBFTConsensus:
+        for nid in node_ids:
+            if nid in byzantine_ids:
+                engine.update_weight(nid, 0.2)  # 拜占庭节点极低权重
+            else:
+                idx = int(nid.split('_')[1])
+                engine.update_weight(nid, 1.0 + 0.3 * (idx % 3))
+
+    latencies = []
+    successes = 0
+    failures = 0
+
+    for round_idx in range(n_rounds):
+        engine.reset()
+        engine._state = ConsensusState.IDLE
+
+        # 本轮静默节点 = 拜占庭节点 + 5% 消息丢失的诚实节点
+        silent = set(byzantine_ids)
+        for nid in node_ids:
+            if nid not in byzantine_ids and random.random() < HONEST_MSG_LOSS:
+                silent.add(nid)
+
+        proposer = engine.get_primary(round_idx // 10)
+        start_ms = time.time() * 1000
+        block_hash = hashlib.sha256(f'block_{round_idx}_{start_ms}'.encode()).hexdigest()
+        ok = engine.simulated_consensus(block_hash, proposer, byzantine_nodes=silent)
+        latency = time.time() * 1000 - start_ms
+
+        if ok:
+            successes += 1
+            latencies.append(latency)
+        else:
+            failures += 1
+
+    avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+    success_rate = successes / n_rounds if n_rounds > 0 else 0.0
+
+    final_weights = {}
+    if use_weights and consensus_class == CWPBFTConsensus:
+        final_weights = engine.get_weights()
+
+    return {
+        'n_nodes': n_nodes,
+        'byzantine_ratio': byzantine_ratio,
+        'n_byzantine': n_byzantine,
+        'n_rounds': n_rounds,
+        'successes': successes,
+        'failures': failures,
+        'success_rate': success_rate,
+        'avg_latency_ms': round(avg_latency, 3),
+        'min_latency_ms': round(min(latencies), 3) if latencies else 0.0,
+        'max_latency_ms': round(max(latencies), 3) if latencies else 0.0,
+        'final_weights': final_weights,
+    }
+
+
+def main():
+    logger.info(f"=== CW-PBFT vs Standard PBFT v3 (native byzantine) ===")
+    logger.info(f"节点数: {NODE_COUNTS}, 拜占庭比例: {BYZANTINE_RATIOS}, 每配置{N_ROUNDS}轮")
+
+    results = {'cw_pbft': [], 'standard_pbft': [], 'comparison': []}
+    total_configs = len(NODE_COUNTS) * len(BYZANTINE_RATIOS)
+    config_idx = 0
+
+    for n in NODE_COUNTS:
+        for byz_ratio in BYZANTINE_RATIOS:
+            config_idx += 1
+            logger.info(f"[{config_idx}/{total_configs}] n={n}, byzantine={byz_ratio:.0%}")
+
+            cw_result = simulate_consensus(CWPBFTConsensus, n, byz_ratio, N_ROUNDS, use_weights=True)
+            cw_result['consensus_type'] = 'cw_pbft'
+            results['cw_pbft'].append(cw_result)
+
+            std_result = simulate_consensus(StandardPBFTConsensus, n, byz_ratio, N_ROUNDS, use_weights=False)
+            std_result['consensus_type'] = 'standard_pbft'
+            results['standard_pbft'].append(std_result)
+
+            latency_improvement = 0.0
+            if std_result['avg_latency_ms'] > 0 and cw_result['avg_latency_ms'] > 0:
+                latency_improvement = (
+                    (std_result['avg_latency_ms'] - cw_result['avg_latency_ms'])
+                    / std_result['avg_latency_ms'] * 100
+                )
+
+            comparison = {
+                'n_nodes': n,
+                'byzantine_ratio': byz_ratio,
+                'cw_pbft_success_rate': cw_result['success_rate'],
+                'std_pbft_success_rate': std_result['success_rate'],
+                'cw_pbft_avg_latency': cw_result['avg_latency_ms'],
+                'std_pbft_avg_latency': std_result['avg_latency_ms'],
+                'latency_improvement_pct': round(latency_improvement, 2),
+                'success_rate_diff': cw_result['success_rate'] - std_result['success_rate'],
+            }
+            results['comparison'].append(comparison)
+
+            logger.info(
+                f"  CW: rate={cw_result['success_rate']:.1%}, lat={cw_result['avg_latency_ms']:.3f}ms | "
+                f"PBFT: rate={std_result['success_rate']:.1%}, lat={std_result['avg_latency_ms']:.3f}ms | "
+                f"diff={comparison['success_rate_diff']:+.1%}"
+            )
+
+    report_path = RESULTS_DIR / 'consensus_comparison_report.json'
+    with open(report_path, 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    logger.info(f"Report saved: {report_path}")
+
+    # 打印摘要表
+    print("\n" + "=" * 95)
+    print("CW-PBFT vs Standard PBFT Comparison Results (native byzantine injection)")
+    print("=" * 95)
+    print(f"{'Nodes':>6} {'Byz%':>6} | {'CW Rate':>8} {'PBFT Rate':>10} | {'CW Lat':>8} {'PBFT Lat':>9} {'Diff':>6}")
+    print("-" * 95)
+    for c in results['comparison']:
+        print(
+            f"{c['n_nodes']:>6} {c['byzantine_ratio']:>5.0%} | "
+            f"{c['cw_pbft_success_rate']:>7.1%} {c['std_pbft_success_rate']:>9.1%} | "
+            f"{c['cw_pbft_avg_latency']:>7.3f}ms {c['std_pbft_avg_latency']:>8.3f}ms "
+            f"{c['success_rate_diff']:>+5.1%}"
+        )
+
+
+if __name__ == '__main__':
+    main()
