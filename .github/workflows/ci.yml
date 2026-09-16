@@ -6,12 +6,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    # 每日定时质检：即使无新提交也自动跑全量测试（24h 无人值守持续优化）
-    - cron: '15 2 * * *'   # 每日 UTC 02:15（北京时间 10:15）
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -66,47 +63,3 @@ jobs:
               assert eng is not None
           print('consensus factory OK')
           "
-
-  review-log:
-    name: Append review log (audit trail)
-    runs-on: ubuntu-latest
-    needs: test
-    # P1-16修复: 与心跳工作流共用 repo-write 串行组，杜绝并行 push 冲突
-    concurrency:
-      group: repo-write
-      cancel-in-progress: false
-    # PR 不写日志（避免给他人 fork 仓库 push）；push/schedule/manual 均记录
-    if: github.event_name != 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configure git identity
-        run: |
-          git config user.name "marl-ecdsa-ci"
-          git config user.email "ci@marl-ecdsa.local"
-
-      - name: Append review log entry
-        run: |
-          mkdir -p activity
-          FILE="activity/review-log.md"
-          [ -f "$FILE" ] || printf '# MARL-ECDSA Continuous Review Log\n\n| Time (UTC) | Event | Status |\n|---|---|---|\n' > "$FILE"
-          printf '| %s | %s | tests passed |\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${{ github.event_name }}" >> "$FILE"
-          git add "$FILE"
-          git commit -m "chore: append review log - $(date -u +%Y-%m-%dT%H:%M:%SZ)" --allow-empty
-          # P1-17修复: 先同步远端，再 force-with-lease 推送（保留本步提交，杜绝并发非快进）
-          git fetch origin main
-          git rebase origin/main || git merge origin/main || true
-          for attempt in 1 2 3 4 5; do
-            if git push --force-with-lease origin main 2>&1 | tee /tmp/push.log; then
-              echo "review log pushed on attempt $attempt"
-              exit 0
-            fi
-            echo "push attempt $attempt failed: $(tail -2 /tmp/push.log)"
-            git fetch origin main
-            git rebase origin/main || git merge origin/main || true
-            sleep 8
-          done
-          echo "all push attempts failed" >&2
-          exit 1
