@@ -8,7 +8,7 @@
 
 **中文版**: [README.zh.md](README.zh.md)
 
-> A Blockchain–AI synergistic consensus mechanism for Multi-Agent Reinforcement Learning (MARL): contribution-weighted consensus (CW-PBFT) secured by ECDSA identities, with a formal Nash equilibrium proof.
+> A Blockchain–AI synergistic consensus mechanism for Multi-Agent Reinforcement Learning (MARL): contribution-weighted consensus (CW-PBFT) secured by ECDSA identities, with a parameter-boundary Nash equilibrium analysis (numerically verified, not a machine-checked formal proof).
 >
 > **CCF 5th Blockchain Technology & Innovation Competition · Technical Innovation Track** | Version 4.1
 
@@ -70,8 +70,8 @@ Data flow: `ECDSA sign → SecurityGuard check → Transaction → Block → CW-
 | Blockchain ↔ MARL two-way loop | ❌ none / weak | ✅ deep closed loop |
 | ECDSA CA-less identity | ❌ none or CA-based | ✅ on-chain key registration + 3-tier guard |
 | Contribution-weighted consensus | ❌ equal-weight PBFT / PoS | ✅ CW-PBFT (Shapley axioms + failover) |
-| Nash equilibrium proof | ❌ none | ✅ strict proof + 50% safety margin |
-| Post-quantum (Dilithium) | ❌ none | ✅ adapter, zero API change |
+| Nash equilibrium analysis | ❌ none | ✅ parameter-boundary derivation + numerical verification (50% margin) |
+| Post-quantum (Dilithium) | ❌ none | ⚠️ architecture reservation only (adapter stub, NOT implemented) |
 | Gossip dynamic discovery | ⚠ libp2p only, MARL-unrelated | ✅ self-built + asyncio + MARL-tuned |
 | Full-chain crypto auditability | ❌ none | ✅ sign→Guard→Tx→Block→consensus |
 | Ablation + λ + multi-seed stats | ⚠ partial | ✅ full matrix, honest reporting |
