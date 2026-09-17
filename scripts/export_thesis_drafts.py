@@ -54,8 +54,8 @@ G_DEFS = (
     ("G1", "注册表每条数字均由脚本从原始数据复算 PASS", "verify_numbers.py"),
     ("G2", "全稿数字三件套齐备（无源数字=0）", "scan_unsourced_numbers.py"),
     ("G3", "全稿不出现作废令牌", "scan_void_tokens.py"),
-    ("G4", "引用域无 freederia.com / SYNTHETIC_ 伪文献", "scan_citation_blacklist.py"),
-    ("G5", "『40% 拜占庭』类表述全部改为省略故障", "scan_void_tokens.py 语义规则 BYZ-40"),
+    ("G4", "引用域无 合成伪文献域 / SYNTHETIC_ 伪文献", "scan_citation_blacklist.py"),
+    ("G5", "『固定比例拜占庭』类表述全部改为省略故障（规则 BYZ-40）", "scan_void_tokens.py 语义规则 BYZ-40"),
     ("G6", "5 章草稿落盘且过匿名合规扫描", "export_thesis_drafts.py + scan_identity.py"),
     ("G7", "≥4 个实验脚本冒烟通过", "run_repeats.py --smoke（本轮未做）"),
     ("G8", "CARS 路标冲突消融 ab1 或 H1~H4 小节", "章节内容检查（本轮未做）"),
@@ -192,7 +192,7 @@ def build_summary(manifest: Dict[str, Any], drafts_id_hits: Optional[int]) -> st
         byz = [h for h in rep["void"]["hits"]
                if h.get("rule") == "semantic_rule:BYZ-40" and h.get("severity") == ac.SEV_BLOCK]
         g["G5"] = ("PASS" if not byz else "PENDING",
-                   f"对外材料中『40% 拜占庭』阻断级命中 {len(byz)} 处"
+                   f"对外材料中『固定比例拜占庭』（规则 BYZ-40）阻断级命中 {len(byz)} 处"
                    + ("" if not byz else "；其余为改写指令（info）"))
     else:
         g["G5"] = ("PENDING", "依赖 scan_void_tokens 报告")

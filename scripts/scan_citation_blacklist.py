@@ -4,7 +4,7 @@
 
 命中两类：
 
-1. 外置 ``citation_blacklist[]``（首条 ``freederia.com`` 全域）；
+1. 外置 ``citation_blacklist[]``（合成伪文献域，具体域名见外部配置，不入库）；
 2. ``citation_markers[]``（如 ``SYNTHETIC_`` 合成标记）。
 
 严重度分级同 ``scan_void_tokens``：对外材料 ``block`` / 历史快照 ``snapshot`` /
