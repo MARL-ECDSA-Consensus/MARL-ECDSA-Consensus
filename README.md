@@ -34,7 +34,7 @@
 - **Deep Blockchain ↔ MARL loop**: blockchain incentives shape MARL rewards (BC→MARL), while MARL behavior feeds contribution scores that weight consensus (MARL→BC).
 - **ECDSA identity without a CA**: on-chain public-key registration + SecurityGuard three-tier defense (k-reuse detection, nonce anti-replay, timestamp validation).
 - **Contribution-Weighted PBFT (CW-PBFT)**: Shapley-style weight derivation (three axioms) with dynamic primary failover; configurable modes `cw_pbft` / `standard_pbft` / `fast`.
-- **Formal Nash equilibrium proof**: strict proof with parameter bounds and 50% safety margin; post-quantum Dilithium adapter with zero-API-change migration.
+- **Parameter-boundary derivation & numerical verification of strict-dominant-strategy Nash (NOT machine-checked formal proof)**: strict proof with parameter bounds and 50% safety margin; Dilithium adapter (architecture reservation ONLY, NOT implemented) for future post-quantum migration.
 - **Self-built Gossip discovery**: asyncio-based dynamic peer discovery tuned for MARL scenarios.
 - **Full-chain cryptographic auditability**: sign → Guard → Tx → Block → consensus.
 - **Rigorous experiments**: ablation matrix, λ-sensitivity and multi-seed statistics, reported under an honest caliber (headline: n=22 seeds, p=0.126 — direction-consistent but **not significant**; see [Experiments & Results](#-experiments--results)).

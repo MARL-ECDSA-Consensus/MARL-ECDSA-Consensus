@@ -304,7 +304,7 @@ def _slide_conclusion(prs, data):
     improvement = (bc_avg - pure_avg) / abs(pure_avg) * 100 if pure_avg != 0 else 0
     slide = prs.slides.add_slide(prs.slide_layouts[6]); add_slide_bg(slide)
     add_title_box(slide, "总结与展望", "Thank You")
-    add_card(slide, 0.5, 1.5, 4.2, 3.5, "项目成果", [f"BC-MARL提升 +{improvement:.0f}% total_reward", "338个单元测试 100%通过", "ECDSA 75,000次签名零失败", "CW-PBFT 100%共识成功率", "Nash均衡理论证明(λ≥0.0667)", "攻击防御 3/3 100%拦截"], ACCENT_GREEN)
+    add_card(slide, 0.5, 1.5, 4.2, 3.5, "项目成果", [f"BC-MARL提升 +{improvement:.0f}% total_reward", "338个单元测试 100%通过", "ECDSA 75,000次签名零失败", "CW-PBFT 100%共识成功率", "严格优势策略的参数边界推导（经验假设下）(λ≥0.0667)", "攻击防御 3/3 100%拦截"], ACCENT_GREEN)
     add_card(slide, 5.3, 1.5, 4.2, 3.5, "未来展望", ["扩展到更多智能体（10+）", "引入DPoS共识优化吞吐", "零知识证明增强隐私", "跨链互操作性研究", "实际应用场景验证", "开源社区生态建设"], ACCENT_BLUE)
     txBox = slide.shapes.add_textbox(Inches(1), Inches(5.3), Inches(8), Inches(1.5))
     tf = txBox.text_frame; p = tf.paragraphs[0]; p.text = "感谢评委指导！"; p.font.size = Pt(36); p.font.bold = True; p.font.color.rgb = ACCENT_GOLD; p.alignment = PP_ALIGN.CENTER
