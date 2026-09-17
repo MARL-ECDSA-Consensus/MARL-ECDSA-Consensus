@@ -37,8 +37,24 @@ from blockchain.consensus.standard_pbft import StandardPBFTConsensus
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger('consensus_compare')
 
-RESULTS_DIR = Path(__file__).parent / 'results' / 'consensus_comparison'
+# 结果落到仓库 results/ 下（原为 legacy/experiments/results，与仓库口径不一致）
+RESULTS_DIR = _Path(_REPO_ROOT) / 'results' / 'consensus_comparison'
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# 保护已有实验结果：默认绝不覆盖（--overwrite 显式开启才覆盖）
+OVERWRITE = False
+
+
+def _safe_write_json(obj, target: Path) -> Path:
+    """写 JSON 但绝不覆盖已存在文件：存在时改写为 <stem>_<时间戳>.json"""
+    target = Path(target)
+    if target.exists() and not OVERWRITE:
+        alt = target.with_name(f"{target.stem}_{time.strftime('%Y%m%d_%H%M%S')}{target.suffix}")
+        logger.warning(f"[保护] {target.name} 已存在，本次报告另存为 {alt.name}")
+        target = alt
+    with open(target, 'w', encoding='utf-8') as f:
+        json.dump(obj, f, indent=2, ensure_ascii=False)
+    return target
 
 NODE_COUNTS = [4, 7, 10, 16]
 BYZANTINE_RATIOS = [0.0, 0.1, 0.2, 0.33, 0.4]
@@ -169,9 +185,7 @@ def main():
                 f"diff={comparison['success_rate_diff']:+.1%}"
             )
 
-    report_path = RESULTS_DIR / 'consensus_comparison_report.json'
-    with open(report_path, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+    report_path = _safe_write_json(results, RESULTS_DIR / 'consensus_comparison_report.json')
     logger.info(f"Report saved: {report_path}")
 
     # 打印摘要表
@@ -190,4 +204,16 @@ def main():
 
 
 if __name__ == '__main__':
+    import argparse as _ap
+    _p = _ap.ArgumentParser(description='CW-PBFT vs Standard PBFT 共识对比')
+    _p.add_argument('--out-dir', type=str, default=None)
+    _p.add_argument('--n-rounds', type=int, default=None)
+    _p.add_argument('--overwrite', action='store_true', default=False)
+    _a = _p.parse_args()
+    if _a.out_dir is not None:
+        RESULTS_DIR = Path(_a.out_dir)
+    if _a.n_rounds is not None:
+        N_ROUNDS = _a.n_rounds
+    OVERWRITE = bool(_a.overwrite)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     main()

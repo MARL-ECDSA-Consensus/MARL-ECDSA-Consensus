@@ -16,6 +16,7 @@ training_results*.json
 *课设*.pptx
 
 # P0-3: 内部过程物与缓存禁止入库（2026-09-17 追加，防止清理后回写）
+.mpl_cache/
 .matplotlib/
 .workbuddy/
 reports/

@@ -39,9 +39,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger('scalability')
 
 PYTHON = sys.executable
-BASE_DIR = Path(__file__).parent
+# 仓库根（原为 Path(__file__).parent → legacy/experiments，train.py 找不到）
+BASE_DIR = _Path(_REPO_ROOT)
 RESULTS_DIR = BASE_DIR / 'results' / 'scalability_test'
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# 保护已有实验结果：默认绝不覆盖
+OVERWRITE = False
+RUN_TIMEOUT = 1800
 
 SEEDS = [42, 123, 456]
 N_EPISODES = 500
@@ -56,8 +61,13 @@ AGENT_CONFIGS = [
 
 def run_single(n_agents, n_landmarks, mode, seed, n_episodes, output_file):
     """运行单次实验"""
+    output_file = Path(output_file)
+    if output_file.exists() and not OVERWRITE:
+        logger.info(f"[SKIP] {mode}_a{n_agents}_seed{seed} 已存在: {output_file.name}")
+        return str(output_file)
+
     cmd = [
-        PYTHON, str(BASE_DIR / 'train.py'),
+        PYTHON, '-X', 'utf8', str(BASE_DIR / 'train.py'),
         '--mode', mode,
         '--n_agents', str(n_agents),
         '--n_landmarks', str(n_landmarks),
@@ -69,8 +79,11 @@ def run_single(n_agents, n_landmarks, mode, seed, n_episodes, output_file):
     name = f"{mode}_a{n_agents}_seed{seed}"
     logger.info(f"[RUN] {name}")
     start = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600,
-                            cwd=str(BASE_DIR))
+    # -X utf8: Windows 中文日志按 GBK 解码会崩；MPLCONFIGDIR 规避 matplotlib 缓存沙箱
+    env = os.environ.copy()
+    env.setdefault('MPLCONFIGDIR', str(BASE_DIR / '.mpl_cache'))
+    result = subprocess.run(cmd, capture_output=True, cwd=str(BASE_DIR), env=env,
+                            encoding='utf-8', errors='replace', timeout=RUN_TIMEOUT)
     elapsed = time.time() - start
 
     if result.returncode != 0:

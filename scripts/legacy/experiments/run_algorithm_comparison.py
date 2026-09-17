@@ -29,15 +29,20 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger('algo_compare')
 
-PROJECT_ROOT = Path(__file__).parent
+# 仓库根目录：scripts/legacy/experiments/<file>.py 上溯 4 级
+# （原为 Path(__file__).parent = .../legacy/experiments，导致 train.py 找不到、
+#   results 落到 legacy 目录下，与仓库 result/ 口径不一致）
+PROJECT_ROOT = _Path(__file__).resolve().parent.parent.parent.parent
 PYTHON = sys.executable
-RESULTS_DIR = PROJECT_ROOT / 'results' / 'algorithm_comparison'
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 ALGORITHMS = ['iql', 'vdn', 'qmix']
 MODES = ['pure_marl', 'bc_marl']
 SEEDS = [42, 123, 456]
 N_EPISODES = 500
+RUN_TIMEOUT = 1800  # 单组训练子进程超时（秒），原为无超时/默认
+
+RESULTS_DIR = PROJECT_ROOT / 'results' / 'algorithm_comparison'
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def run_single(algo: str, mode: str, seed: int) -> str:
@@ -49,7 +54,7 @@ def run_single(algo: str, mode: str, seed: int) -> str:
         return str(output_file)
 
     cmd = [
-        PYTHON, 'train.py',
+        PYTHON, '-X', 'utf8', str(PROJECT_ROOT / 'train.py'),
         '--mode', mode,
         '--seed', str(seed),
         '--n_episodes', str(N_EPISODES),
@@ -60,7 +65,12 @@ def run_single(algo: str, mode: str, seed: int) -> str:
 
     logger.info(f"[RUN] {algo}/{mode}/seed{seed} ({N_EPISODES}ep)")
     start = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT))
+    # -X utf8: Windows 下中文日志按 GBK 解码会崩；MPLCONFIGDIR 避免 matplotlib 缓存踩沙箱
+    env = os.environ.copy()
+    env.setdefault('MPLCONFIGDIR', str(PROJECT_ROOT / '.mpl_cache'))
+    result = subprocess.run(cmd, capture_output=True, cwd=str(PROJECT_ROOT),
+                            env=env, encoding='utf-8', errors='replace',
+                            timeout=RUN_TIMEOUT)
     elapsed = time.time() - start
 
     if result.returncode != 0:
@@ -150,7 +160,36 @@ def generate_report():
     return results
 
 
+def _parse_args(argv=None):
+    """命令行覆盖（仅在 __main__ 中调用，避免污染 pytest 的 sys.argv）"""
+    import argparse
+    p = argparse.ArgumentParser(description='IQL vs VDN vs QMIX 三算法对比')
+    p.add_argument('--seeds', type=int, nargs='+', default=None)
+    p.add_argument('--n-episodes', type=int, default=None)
+    p.add_argument('--algorithms', type=str, nargs='+', default=None)
+    p.add_argument('--modes', type=str, nargs='+', default=None)
+    p.add_argument('--out-dir', type=str, default=None,
+                   help='结果目录；默认 <repo>/results/algorithm_comparison')
+    p.add_argument('--timeout', type=int, default=None)
+    return p.parse_args(argv)
+
+
 if __name__ == '__main__':
+    _a = _parse_args()
+    if _a.seeds is not None:
+        SEEDS = _a.seeds
+    if _a.n_episodes is not None:
+        N_EPISODES = _a.n_episodes
+    if _a.algorithms is not None:
+        ALGORITHMS = _a.algorithms
+    if _a.modes is not None:
+        MODES = _a.modes
+    if _a.timeout is not None:
+        RUN_TIMEOUT = _a.timeout
+    if _a.out_dir is not None:
+        RESULTS_DIR = Path(_a.out_dir)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
     logger.info(f"=== 算法对比实验启动 ===")
     logger.info(f"矩阵: {len(ALGORITHMS)}算法 x {len(MODES)}模式 x {len(SEEDS)}种子 = {len(ALGORITHMS)*len(MODES)*len(SEEDS)}组")
     logger.info(f"每组 {N_EPISODES} 回合")

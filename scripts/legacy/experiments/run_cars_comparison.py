@@ -36,9 +36,27 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger('cars_comparison')
 
 PYTHON = sys.executable
-BASE_DIR = Path(__file__).parent
+# 仓库根目录：scripts/legacy/experiments/<file>.py 上溯 4 级
+# （原 BASE_DIR=Path(__file__).parent → .../legacy/experiments，train.py 找不到）
+BASE_DIR = _Path(__file__).resolve().parent.parent.parent.parent
 RESULTS_DIR = BASE_DIR / 'results' / 'cars_comparison'
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# 保护已有实验结果：默认绝不覆盖（--overwrite 显式开启才覆盖）
+OVERWRITE = False
+RUN_TIMEOUT = 1800  # 单组子进程超时（秒），原为硬编码 300
+
+
+def _safe_write_json(obj, target: Path) -> Path:
+    """写 JSON 但绝不覆盖已存在文件：存在时改写为 <stem>_<时间戳>.json"""
+    target = Path(target)
+    if target.exists() and not OVERWRITE:
+        alt = target.with_name(f"{target.stem}_{time.strftime('%Y%m%d_%H%M%S')}{target.suffix}")
+        logger.warning(f"[保护] {target.name} 已存在，本次报告另存为 {alt.name}")
+        target = alt
+    with open(target, 'w', encoding='utf-8') as f:
+        json.dump(obj, f, indent=2, ensure_ascii=False, default=str)
+    return target
 
 CONFIGS = [
     {"name": "bc_marl_baseline", "mode": "bc_marl", "consensus_shaping": False, "eta": 0.0},
@@ -53,9 +71,12 @@ N_EPISODES = 500
 def run_single(config_name, mode, seed, consensus_shaping, eta, n_episodes):
     """运行单次实验"""
     output_file = RESULTS_DIR / f"{config_name}_seed{seed}.json"
+    if output_file.exists() and not OVERWRITE:
+        logger.info(f"[SKIP] {config_name}/seed{seed} 已存在: {output_file.name}")
+        return str(output_file)
 
     cmd = [
-        PYTHON, str(BASE_DIR / 'train.py'),
+        PYTHON, '-X', 'utf8', str(BASE_DIR / 'train.py'),
         '--mode', mode,
         '--seed', str(seed),
         '--n_episodes', str(n_episodes),
@@ -66,8 +87,11 @@ def run_single(config_name, mode, seed, consensus_shaping, eta, n_episodes):
 
     logger.info(f"[RUN] {config_name}/seed{seed} ({n_episodes}ep)")
     start = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300,
-                            cwd=str(BASE_DIR))
+    # -X utf8: Windows 中文日志按 GBK 解码会崩；MPLCONFIGDIR 规避 matplotlib 缓存沙箱
+    env = os.environ.copy()
+    env.setdefault('MPLCONFIGDIR', str(BASE_DIR / '.mpl_cache'))
+    result = subprocess.run(cmd, capture_output=True, cwd=str(BASE_DIR), env=env,
+                            encoding='utf-8', errors='replace', timeout=RUN_TIMEOUT)
     elapsed = time.time() - start
 
     if result.returncode != 0:
@@ -124,7 +148,9 @@ def welch_ttest(group_a, group_b, name_a, name_b):
     }
 
 
-def main():
+def main(argv=None):
+    _apply_args(_parse_args(argv))
+
     logger.info("=" * 60)
     logger.info("CARS 共识感知奖励塑形对比实验")
     logger.info(f"配置: {len(CONFIGS)} 组 x {len(SEEDS)} seeds = {len(CONFIGS) * len(SEEDS)} 次")
@@ -215,11 +241,38 @@ def main():
             sig = "***" if test_data['p_value'] < 0.001 else "**" if test_data['p_value'] < 0.01 else "*" if test_data['p_value'] < 0.05 else "ns"
             print(f"  {test_name}: improvement={test_data['improvement_pct']:+.1f}% p={test_data['p_value']:.4f} d={test_data['cohens_d']:.2f} {sig}")
 
-    # 保存报告
-    report_path = RESULTS_DIR / 'cars_comparison_report.json'
-    with open(report_path, 'w', encoding='utf-8') as f:
-        json.dump(report, f, indent=2, ensure_ascii=False, default=str)
+    # 保存报告（不覆盖已有报告）
+    report_path = _safe_write_json(report, RESULTS_DIR / 'cars_comparison_report.json')
     logger.info(f"\n报告已保存: {report_path}")
+    return report
+
+
+def _parse_args(argv=None):
+    """命令行覆盖（仅在 __main__ 调用，避免污染 pytest 的 sys.argv）"""
+    import argparse
+    p = argparse.ArgumentParser(description='CARS 共识感知奖励塑形对比')
+    p.add_argument('--seeds', type=int, nargs='+', default=None)
+    p.add_argument('--n-episodes', type=int, default=None)
+    p.add_argument('--out-dir', type=str, default=None,
+                   help='结果目录；默认 <repo>/results/cars_comparison')
+    p.add_argument('--timeout', type=int, default=None)
+    p.add_argument('--overwrite', action='store_true', default=False)
+    return p.parse_args(argv)
+
+
+def _apply_args(_a):
+    """把命令行覆盖应用到模块级全局"""
+    global SEEDS, N_EPISODES, RESULTS_DIR, OVERWRITE, RUN_TIMEOUT
+    if _a.seeds is not None:
+        SEEDS = _a.seeds
+    if _a.n_episodes is not None:
+        N_EPISODES = _a.n_episodes
+    if _a.timeout is not None:
+        RUN_TIMEOUT = _a.timeout
+    OVERWRITE = bool(_a.overwrite)
+    if _a.out_dir is not None:
+        RESULTS_DIR = Path(_a.out_dir)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 if __name__ == '__main__':

@@ -1,27 +1,47 @@
 """
-Post-Quantum Dilithium Signature Adapter
-=========================================
-Lightweight compatibility interface for CRYSTALS-Dilithium (NIST FIPS 204).
+Post-Quantum Dilithium Signature Adapter — ARCHITECTURE RESERVATION ONLY, NOT IMPLEMENTED
+=========================================================================================
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!  WARNING — DO NOT MISREPRESENT THIS MODULE IN ANY PAPER / REPORT / DEFENSE       !!
+!!                                                                                  !!
+!!  STATUS: **NOT IMPLEMENTED**. This file contains NO post-quantum cryptography.   !!
+!!  `DILITHIUM_AVAILABLE = False` is hard-coded; the real `import` is commented out. !!
+!!  Every sign() / verify() call silently falls back to classical ECDSA.             !!
+!!  get_security_level() returns "0-bit quantum (Shor-vulnerable)".                  !!
+!!                                                                                  !!
+!!  => The system provides **ZERO** post-quantum / quantum resistance today.         !!
+!!  => Any performance figure for Dilithium in this file is a hard-coded ESTIMATE,   !!
+!!     NOT a measurement on this machine, and must NOT be cited as experimental data.!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-Provides an interface-compatible wrapper around ECDSAUtils, enabling:
-  1. Drop-in signature algorithm swap (ECDSA ↔ Dilithium)
-  2. Hybrid dual-signature mode (ECDSA + Dilithium for transition period)
-  3. Performance comparison instrumentation
-  4. Same API surface as ECDSAUtils for zero-cost migration
+Lightweight compatibility interface *stub* for CRYSTALS-Dilithium (NIST FIPS 204).
 
-Architecture:
-  ECDSAUtils (current)           DilithiumAdapter (future)
-  ─────────────────────          ──────────────────────────
-  sign(private_key, msg)    →    sign(private_key, msg)
-  verify(public_key, msg, sig) → verify(public_key, msg, sig)
-  sign_action(agent_id, ...) →  sign_action(agent_id, ...)
+What this module actually provides today (all classical ECDSA):
+  1. An interface-compatible wrapper AROUND ECDSAUtils (Dilithium branch never taken)
+  2. A hybrid dual-signature *skeleton* whose Dilithium half never executes
+  3. Instrumentation hooks (benchmark scaffolding only)
+  4. Same API surface as ECDSAUtils so that a future swap is a one-line change
 
-Note: This is an INTERFACE COMPATIBILITY LAYER for the post-quantum migration path.
-Full Dilithium implementation requires pqcrypto library or NIST reference code.
-This adapter demonstrates the migration architecture and can be activated
-by installing pqcrypto and setting DILITHIUM_ENABLED = True.
+Architecture (ASPIRATIONAL — the right-hand column does not exist yet):
+  ECDSAUtils (current, ACTIVE)     DilithiumAdapter (RESERVED, INACTIVE)
+  ───────────────────────────      ─────────────────────────────────────
+  sign(private_key, msg)      →    sign(private_key, msg)      [falls back to ECDSA]
+  verify(public_key, msg, sig)→    verify(public_key, msg, sig) [falls back to ECDSA]
+  sign_action(agent_id, ...)  →    sign_action(agent_id, ...)  [falls back to ECDSA]
 
-CCF 5th Blockchain Competition | V4.1 | Phase 2 Innovation: Post-Quantum Readiness
+Note: This is an INTERFACE COMPATIBILITY LAYER ONLY — a migration *reservation*.
+It does NOT implement, link, or call any post-quantum algorithm.
+Full Dilithium support would require installing `pqcrypto` (or `dilithium-py`) and
+wiring the DILITHIUM_AVAILABLE branch to the real library, plus real sign/verify
+tests and **on-machine** benchmarks.
+
+Correct wording for papers/reports/defense:
+    "后量子签名（CRYSTALS-Dilithium / NIST FIPS 204）为架构预留，本项目未实现；
+     当前所有签名均为经典 ECDSA，不具备抗量子能力。"
+    ("Post-quantum signing is an architectural reservation and is NOT implemented;
+      all signatures in this system are classical ECDSA and are not quantum-resistant.")
+
+CCF 5th Blockchain Competition | V4.1 | Phase 2: Post-Quantum Migration Reservation (unimplemented)
 """
 import hashlib
 import json
@@ -90,13 +110,18 @@ class DilithiumAdapter(SignatureAdapter):
     """
     CRYSTALS-Dilithium adapter (NIST FIPS 204).
 
-    Currently uses ECDSA as fallback until pqcrypto is installed.
-    This is an INTERFACE DEMONSTRATION for the post-quantum migration path.
+    Currently uses ECDSA as fallback until pqcrypto is installed — and because
+    `DILITHIUM_AVAILABLE` is hard-coded False, the fallback is ALWAYS taken.
+
+    NOT IMPLEMENTED: no Dilithium sign/verify code path exists. The size constants
+    below are FIPS 204 SPEC VALUES for reference only — this system never produces
+    a Dilithium signature, so these are NOT measurements and must not be reported
+    as experimental data.
     """
 
-    DILITHIUM_SIGNATURE_SIZE = 2420   # Dilithium2: ~2.4KB
-    DILITHIUM_PUBLIC_KEY_SIZE = 1312  # Dilithium2: ~1.3KB
-    DILITHIUM_PRIVATE_KEY_SIZE = 2528 # Dilithium2: ~2.5KB
+    DILITHIUM_SIGNATURE_SIZE = 2420   # FIPS 204 SPEC value only — NOT produced by this system
+    DILITHIUM_PUBLIC_KEY_SIZE = 1312  # FIPS 204 SPEC value only — NOT produced by this system
+    DILITHIUM_PRIVATE_KEY_SIZE = 2528 # FIPS 204 SPEC value only — NOT produced by this system
 
     def __init__(self, use_fallback: bool = True):
         """
@@ -210,8 +235,14 @@ class HybridSignatureAdapter:
             "phase": "Transition (dual-signature)",
             "ecdsa": self._ecdsa.get_security_level(),
             "dilithium": self._dilithium.get_security_level(),
-            "dual_signature_overhead_ms_estimate": "0.12 (ECDSA) + 0.15 (Dilithium) = 0.27ms",
-            "total_signature_size_bytes": 70 + 2420,  # ECDSA + Dilithium
+            # NOT IMPLEMENTED / NOT MEASURED. Dilithium is an architectural
+            # reservation; no post-quantum code path exists in this repository.
+            # Previously this hard-coded "0.15"/"0.05" as a "NIST benchmark
+            # estimate" — a literature figure that was NOT measured on this
+            # machine and must never be cited as experimental data.
+            "dual_signature_overhead_ms_estimate": None,  # NOT MEASURED — Dilithium not implemented
+            "dilithium_status": "NOT IMPLEMENTED (architecture reservation only)",
+            "total_signature_size_bytes": None,  # NOT MEASURED — hybrid mode never produces a Dilithium signature
             "verification_policy": "AND (both must pass)",
         }
 
@@ -253,23 +284,31 @@ def benchmark_signature_adapters(num_iterations: int = 1000):
         "standard": "FIPS 186-5",
     })
 
-    # Dilithium estimates (from NIST benchmarks)
+    # Dilithium — NOT IMPLEMENTED, therefore NOT MEASURED.
+    # The 0.15 / 0.05 ms figures previously hard-coded here were "NIST benchmark
+    # estimates" copied from literature, NOT measurements on this machine, and
+    # MUST NOT be reported as experimental results. They are removed here so that
+    # no downstream report can accidentally cite them as data.
     results["adapters"].append({
         "algorithm": "CRYSTALS-Dilithium2",
-        "sign_ms": 0.15,  # NIST benchmark estimate
-        "verify_ms": 0.05,  # NIST benchmark estimate
-        "sig_size_bytes": 2420,
-        "quantum_resistant": True,
+        "implemented": False,
+        "status": "NOT IMPLEMENTED — architecture reservation only",
+        "sign_ms": None,  # NOT MEASURED (was hard-coded 0.15 literature estimate — removed)
+        "verify_ms": None,  # NOT MEASURED (was hard-coded 0.05 literature estimate — removed)
+        "sig_size_bytes": None,  # NOT MEASURED (spec value 2420 not produced by this system)
+        "quantum_resistant": None,  # N/A — no Dilithium code path exists; system is Shor-vulnerable
         "standard": "FIPS 204 (2024)",
     })
 
     # Hybrid
     results["adapters"].append({
         "algorithm": "Hybrid (ECDSA + Dilithium)",
-        "sign_ms": round(ecdsa_sign_ms + 0.15, 4),
-        "verify_ms": round(ecdsa_verify_ms + 0.05, 4),
-        "sig_size_bytes": 70 + 2420,
-        "quantum_resistant": True,
+        "implemented": False,
+        "status": "NOT IMPLEMENTED — Dilithium half never executes; verify() degrades to ECDSA-only",
+        "sign_ms": None,  # NOT MEASURED
+        "verify_ms": None,  # NOT MEASURED
+        "sig_size_bytes": None,  # NOT MEASURED
+        "quantum_resistant": None,  # N/A
         "standard": "FIPS 186-5 + FIPS 204",
     })
 
@@ -283,8 +322,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     print("=" * 60)
-    print("Post-Quantum Dilithium Adapter — Interface Demo")
+    print("Post-Quantum Dilithium Adapter — Interface Demo (NOT IMPLEMENTED)")
     print("=" * 60)
+    print("!! This module performs NO post-quantum cryptography. All operations")
+    print("!! below fall back to classical ECDSA. Read as: architecture reservation.")
 
     # 1. Current ECDSA
     ecdsa = ECDSAAdapter()
@@ -311,6 +352,9 @@ if __name__ == "__main__":
               f"sign={adapter['sign_ms']}ms, verify={adapter['verify_ms']}ms, "
               f"sig={adapter['sig_size_bytes']}B, {pq_label}")
 
-    print(f"\n✅ Dilithium adapter ready for post-quantum migration!")
-    print(f"   When to migrate: Install pqcrypto → set DILITHIUM_AVAILABLE = True")
-    print(f"   Code changes needed: ZERO (Adapter pattern preserves all APIs)")
+    print(f"\n⚠️  STATUS: Dilithium / post-quantum signing is NOT IMPLEMENTED.")
+    print(f"   `DILITHIUM_AVAILABLE` is hard-coded False; all sign/verify calls fall")
+    print(f"   back to classical ECDSA. The system has NO quantum resistance today.")
+    print(f"   This module is an architectural RESERVATION for a future migration.")
+    print(f"   To make it real: install pqcrypto → set DILITHIUM_AVAILABLE = True,")
+    print(f"   then add real Dilithium sign/verify tests and ON-MACHINE benchmarks.")

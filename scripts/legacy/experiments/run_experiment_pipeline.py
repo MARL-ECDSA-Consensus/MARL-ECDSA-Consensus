@@ -24,7 +24,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+# 仓库根（原为 Path(__file__).parent → legacy/experiments）
+ROOT = Path(_REPO_ROOT)
 sys.path.insert(0, str(ROOT))
 
 logging.basicConfig(
