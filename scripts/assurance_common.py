@@ -664,16 +664,36 @@ def extract_pptx_strings(path: os.PathLike | str) -> List[Tuple[str, str]]:
 
 
 def extract_pdf_strings(path: os.PathLike | str) -> List[str]:
-    """从 PDF 原始字节中抽取 ``/Title`` ``/Author`` 等元数据串（NFR-4）。"""
+    """从 PDF 原始字节中抽取 ``/Title`` ``/Author`` 等元数据串（NFR-4）。
+
+    兼容两类中文编码：
+    1) PDF 规范的 UTF-16BE hex 串（``/Author <FEFF5F20...>``）；
+    2) 括号串 ``(...)`` 内的 UTF-8 字节（先按 latin-1 解码再还原 UTF-8，
+       避免 ``张敏杰`` 被解成 mojibake 而漏报）。
+    """
     try:
         raw = Path(path).read_bytes()
     except OSError:
         return []
-    text = raw.decode("latin-1", errors="replace")
     found: List[str] = []
+    # 1) UTF-16BE hex 串：/Author <FEFF...>
+    for m in re.finditer(rb"/(Title|Author|Subject|Keywords|Creator|Producer)\s*<([0-9A-Fa-f]+)>", raw):
+        key = m.group(1).decode("ascii", "replace")
+        try:
+            val = bytes.fromhex(m.group(2).decode("ascii")).decode("utf-16-be", errors="replace")
+            found.append(f"/{key} = {val}")
+        except (ValueError, UnicodeDecodeError):
+            pass
+    # 2) 括号串（含 latin-1→utf-8 mojibake 还原）
+    text = raw.decode("latin-1", errors="replace")
     for key in ("Title", "Author", "Subject", "Keywords", "Creator", "Producer"):
         for m in re.finditer(r"/" + key + r"\s*\(([^)]*)\)", text):
-            found.append(f"/{key} = {m.group(1)}")
+            val = m.group(1)
+            try:
+                val = val.encode("latin-1").decode("utf-8")
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                pass
+            found.append(f"/{key} = {val}")
     return found
 
 

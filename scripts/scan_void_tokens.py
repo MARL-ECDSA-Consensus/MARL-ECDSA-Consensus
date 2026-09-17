@@ -38,14 +38,15 @@ _COMPANY_MSG = "作废令牌禁止出现在对外/论文材料（NFR-3）；历�
 
 
 def _compile_numeric(tok: str) -> re.Pattern:
-    """数字边界正则：``(?<![\\d.])<tok>(?![\\d])``。
+    """数字边界正则：``(?<![\\w.])<tok>(?![\\w.])``。
 
-    负号兼容 ASCII ``-`` 与 Unicode 减号 ``−``（U+2212，PRD/审计文档常用后者）。
+    两侧对称排除 ``\\w`` 与 ``.``，避免 ``6026.5`` / ``v6026x`` / ``x6026`` /
+    ``6026.`` 等被误报；负号兼容 ASCII ``-`` 与 Unicode 减号 ``−``（U+2212）。
     """
     if tok.startswith("-"):
         body = tok[1:]
-        return re.compile(r"(?<![\d.])(?:-|\u2212)?" + re.escape(body) + r"(?![\d])")
-    return re.compile(r"(?<![\d.])" + re.escape(tok) + r"(?![\d])")
+        return re.compile(r"(?<![\w.])(?:-|\u2212)?" + re.escape(body) + r"(?![\w.])")
+    return re.compile(r"(?<![\w.])" + re.escape(tok) + r"(?![\w.])")
 
 
 def build_matchers(blacklist: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -59,7 +60,10 @@ def build_matchers(blacklist: Dict[str, Any]) -> List[Dict[str, Any]]:
         if not tok:
             continue
         rx = _compile_numeric(tok) if kind in ("numeric", "percent") else re.compile(re.escape(tok))
-        matchers.append({"regex": rx, "rule": "void_token", "hint": f"作废令牌 {tok}：{_COMPANY_MSG}"})
+        matchers.append({
+            "regex": rx, "rule": "void_token", "hint": f"作废令牌 {tok}：{_COMPANY_MSG}",
+            "needs_review": bool(item.get("needs_review")) if isinstance(item, dict) else False,
+        })
     for r in blacklist.get("semantic_rules", []):
         matchers.append({
             "regex": re.compile(r["pattern"]),
@@ -106,11 +110,17 @@ def scan(root: Path, cfg: Dict[str, Any], blacklist: Dict[str, Any]) -> Dict[str
                         sev, context = ac.SEV_INFO, "code_line_ref"
                     else:
                         sev, context = default_sev, scope
+                    hint = m["hint"]
+                    # needs_review 令牌（如 40.6）存在可信新测值同数值碰撞：命中需人工确认，
+                    # 从 block/snapshot 降级为 warn，且 warn 不影响退出码（仅 block 才 exit 1）。
+                    if m.get("needs_review") and sev in (ac.SEV_BLOCK, ac.SEV_SNAPSHOT):
+                        sev = ac.SEV_WARN
+                        hint += "「此 token 存在可信新测值同数值碰撞（如 +40.6%），命中需人工确认是否为新测值」"
                     hits.append({
                         "file": rel, "line": lineno, "match": mm.group(0),
                         "rule": m["rule"], "severity": sev, "context": context,
                         "snippet": ac.snippet(line, mm.start(), mm.end()),
-                        "hint": m["hint"],
+                        "hint": hint,
                     })
 
     counts = ac.scanner_severity_counts(hits)
