@@ -47,6 +47,30 @@ class TestAttackInjectAPI:
         assert data['no_bc']['attack_successful'] is True
         assert data['with_bc']['attack_successful'] is False
 
+    def test_sybil_attack(self, client):
+        r = client.get('/api/attack/inject?type=sybil_attack')
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data['attack_type'] == 'sybil_attack'
+        assert data['no_bc']['attack_successful'] is True
+        assert data['with_bc']['attack_successful'] is False
+
+    def test_k_reuse_attack(self, client):
+        r = client.get('/api/attack/inject?type=k_reuse_attack')
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data['attack_type'] == 'k_reuse_attack'
+        assert data['no_bc']['attack_successful'] is True
+        assert data['with_bc']['attack_successful'] is False
+
+    def test_long_range_attack(self, client):
+        r = client.get('/api/attack/inject?type=long_range_attack')
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data['attack_type'] == 'long_range_attack'
+        assert data['no_bc']['attack_successful'] is True
+        assert data['with_bc']['attack_successful'] is False
+
     def test_byzantine_primary(self, client):
         r = client.get('/api/attack/inject?type=byzantine')
         assert r.status_code == 200
@@ -62,7 +86,7 @@ class TestAttackInjectAPI:
         assert r.status_code == 200
         data = r.get_json()
         assert data['attack_type'] == 'all'
-        assert len(data['results']) == 3
+        assert len(data['results']) == 6
         # 全部被拦截
         for res in data['results']:
             assert res['with_bc']['attack_successful'] is False

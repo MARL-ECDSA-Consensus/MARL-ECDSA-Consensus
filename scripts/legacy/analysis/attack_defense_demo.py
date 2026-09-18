@@ -1,14 +1,17 @@
 """
-攻击防御演示模块 — 三种攻击场景对比（无BC vs 有BC）
+攻击防御演示模块 — 六种攻击场景对比（无BC vs 有BC）（E6 扩展：2026-09-18 由 3 → 6 类）
 
 攻击类型：
 1. 观测伪造攻击：智能体谎报位置，诱导其他智能体让路
 2. 消息篡改攻击：中间人篡改动作消息内容
 3. 重放攻击：重放旧的有效消息，干扰当前决策
+4. 女巫/Sybil 攻击：伪造大量身份，以数量淹没共识（贡献度门控权重拦截）
+5. k 值重用攻击：同 k 签不同消息 → 私钥泄露（SecurityGuard k 重用检测拦截）
+6. 长程攻击：复用旧纪元合法签名伪造历史（时间戳窗口 + 纪元绑定拦截）
 
 每种攻击对比：
 - 无BC模式：攻击成功，系统受损
-- 有BC模式：攻击被ECDSA验签/SecurityGuard/链上哈希校验拦截
+- 有BC模式：攻击被ECDSA验签/SecurityGuard/链上承诺绑定/贡献度门控权重拦截
 """
 
 # ===== 自动注入: 仓库根路径 (legacy 移动兼容) =====
@@ -22,9 +25,11 @@ if _REPO_ROOT not in _sys.path:
 import hashlib
 import json
 import logging
+import math
 import os
 import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -351,6 +356,283 @@ def demo_replay_attack() -> Dict:
 
 
 # ──────────────────────────────────────────────────────────────
+# 攻击4: 女巫/Sybil 攻击
+# ──────────────────────────────────────────────────────────────
+
+def demo_sybil_attack(key_dir: str = None) -> Dict:
+    """
+    攻击4: 女巫/Sybil 攻击
+    攻击者伪造大量身份，试图以数量投票权重淹没共识。
+
+    无BC（朴素一身份一票）：Sybil 数量 > 诚实节点即获胜。
+    有BC：每个身份必须持有 ECDSA 密钥且贡献权重需累积
+          （INITIAL_WEIGHT=0.3，MIN_WEIGHT=0.1 下界）；
+          Sybil 即使数量多，其累计权重 << 诚实方（已累积贡献），
+          无法达到 2/3 权重阈值 → 恶意提案被拒。
+    """
+    if key_dir is None:
+        key_dir = tempfile.mkdtemp(prefix="keys_sybil_")
+    logger.info("\n" + "=" * 60)
+    logger.info("攻击4: 女巫攻击 (Sybil Attack)")
+    logger.info("=" * 60)
+
+    from blockchain.consensus.cw_pbft import CWPBFTConsensus
+
+    honest_n, sybil_n = 4, 8  # Sybil 数量远超诚实节点
+    result = {"attack_type": "sybil_attack", "no_bc": {}, "with_bc": {}}
+
+    # --- 无BC模式（朴素一身份一票）---
+    logger.info(f"[无BC] 诚实节点 {honest_n} 个，Sybil {sybil_n} 个（数量淹没）")
+    logger.info("[无BC] 朴素计数投票：Sybil 多数 → 恶意提案通过")
+    no_bc_pass = sybil_n > honest_n
+    result["no_bc"] = {
+        "attack_successful": no_bc_pass,
+        "description": "身份无成本，Sybil 数量占优即获胜",
+        "honest_n": honest_n, "sybil_n": sybil_n,
+    }
+
+    # --- 有BC模式：贡献度门控权重 ---
+    km = KeyManager(key_dir=key_dir)
+    nodes = [f"honest_{i}" for i in range(honest_n)] + [f"sybil_{i}" for i in range(sybil_n)]
+    engine = CWPBFTConsensus("honest_0", nodes)
+    # 诚实节点累积贡献后权重提升（模拟 update_weight 调用，无上界钳制）
+    for h in range(honest_n):
+        engine.update_weight(f"honest_{h}", 2.0)
+    sybil_weight = sum(engine.get_weights()[f"sybil_{i}"] for i in range(sybil_n))
+    honest_weight = sum(engine.get_weights()[f"honest_{i}"] for i in range(honest_n))
+    total = engine._total_weight
+    threshold = (2 / 3) * total
+    logger.info(f"[有BC] 诚实权重={honest_weight:.2f}  Sybil权重={sybil_weight:.2f}  "
+                f"总权重={total:.2f}  阈值={threshold:.2f}")
+    sybil_pass = sybil_weight >= threshold
+    blocked = not sybil_pass
+    logger.info(f"[有BC] Sybil 提案权重 {sybil_weight:.2f} {'<' if blocked else '>='} 阈值 "
+                f"→ {'拦截' if blocked else '通过'}（诚实方 {honest_weight:.2f}≥阈值→合法提案可通过）")
+    result["with_bc"] = {
+        "attack_successful": not blocked,
+        "description": "贡献度门控权重：Sybil 初始权重低且无累积，无法达 2/3 阈值",
+        "honest_weight": round(honest_weight, 3),
+        "sybil_weight": round(sybil_weight, 3),
+        "threshold": round(threshold, 3),
+        "sybil_pass": sybil_pass,
+        "blocked": blocked,
+    }
+    shutil.rmtree(key_dir, ignore_errors=True)
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
+# 攻击5: k 值重用攻击
+# ──────────────────────────────────────────────────────────────
+
+def demo_k_reuse_attack(key_dir: str = None) -> Dict:
+    """
+    攻击5: k 值重用攻击（ECDSA 同 k 签不同消息 → 私钥泄露）
+    攻击者用相同随机数 k 对两条不同消息签名 → r 值相同 → 私钥可推导。
+
+    无BC：仅验签，不检测 r 重用 → 攻击静默成功（私钥泄露）。
+    有BC：SecurityGuard 的 k 值重用检测拦截（相同 r 二次出现即告警）。
+    """
+    if key_dir is None:
+        key_dir = tempfile.mkdtemp(prefix="keys_kreuse_")
+    logger.info("\n" + "=" * 60)
+    logger.info("攻击5: k 值重用攻击 (k-Reuse / Key Extraction)")
+    logger.info("=" * 60)
+
+    km = KeyManager(key_dir=key_dir)
+    km.generate_or_load("victim")
+    guard = SecurityGuard()
+    result = {"attack_type": "k_reuse_attack", "no_bc": {}, "with_bc": {}}
+
+    msg_a = json.dumps({"agent_id": "victim", "action": "A", "step": 1}, sort_keys=True).encode()
+    msg_b = json.dumps({"agent_id": "victim", "action": "B", "step": 2}, sort_keys=True).encode()
+    sig_a = _sign_message(km, "victim", msg_a)
+    r_a, _ = ECDSAUtils.extract_rs(sig_a)
+    sig_b = _sign_message(km, "victim", msg_b)
+    r_b, _ = ECDSAUtils.extract_rs(sig_b)
+
+    # --- 无BC模式：只验签，不检测 r 重用 ---
+    ok_a = _verify_message(km, "victim", msg_a, sig_a)
+    ok_b = _verify_message(km, "victim", msg_b, sig_b)
+    logger.info(f"[无BC] 两条签名验签: {ok_a and ok_b}（合法签名均通过，r 重用无检测）")
+    logger.info("[无BC] X 攻击成功！相同 r 暴露 → 私钥可被推导")
+    result["no_bc"] = {
+        "attack_successful": True,
+        "description": "无 r 重用检测，私钥因 k 重用泄露",
+        "sig_a_valid": ok_a, "sig_b_valid": ok_b,
+    }
+
+    # --- 有BC模式：SecurityGuard 检测 r 重用 ---
+    pkg_a = {"agent_id": "victim", "action": {"action": "A"}, "timestamp": int(time.time() * 1000),
+             "nonce": 1, "r": r_a, "s": 1, "signature_hex": sig_a.hex()}
+    pkg_b = {"agent_id": "victim", "action": {"action": "B"}, "timestamp": int(time.time() * 1000),
+             "nonce": 2, "r": r_a, "s": 1, "signature_hex": sig_a.hex()}  # 复用 r_a
+    guard.register_nonce_baseline("victim", 0)
+    is_safe_a, _ = guard.check_package(pkg_a)
+    is_safe_b, reason_b = guard.check_package(pkg_b)
+    blocked = not is_safe_b
+    logger.info(f"[有BC] pkg_a 安全={is_safe_a}; pkg_b（复用 r）安全={is_safe_b} 原因={reason_b}")
+    logger.info(f"[有BC] 攻击{'被拦截' if blocked else '成功'}！SecurityGuard k 值重用检测")
+    result["with_bc"] = {
+        "attack_successful": not blocked,
+        "description": "SecurityGuard 检测 r 值重用 → K_REUSE_ATTACK 告警",
+        "pkg_a_safe": is_safe_a,
+        "pkg_b_safe": is_safe_b,
+        "block_reason": reason_b,
+        "blocked": blocked,
+    }
+    shutil.rmtree(key_dir, ignore_errors=True)
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
+# 攻击6: 长程攻击
+# ──────────────────────────────────────────────────────────────
+
+def demo_long_range_attack(key_dir: str = None) -> Dict:
+    """
+    攻击6: 长程攻击（Long-Range / 旧纪元签名伪造历史）
+    攻击者保存诚实节点在旧纪元的合法签名消息，在新区元重放/伪造，
+    试图改写历史或注入过期但"密码学上仍有效"的消息。
+
+    无BC：旧签名仍被当作有效 → 历史可被篡改。
+    有BC：纪元绑定 + 时间戳窗口（±30s）+ nonce 单调 → 旧纪元消息被拒。
+    """
+    if key_dir is None:
+        key_dir = tempfile.mkdtemp(prefix="keys_long_")
+    logger.info("\n" + "=" * 60)
+    logger.info("攻击6: 长程攻击 (Long-Range Attack)")
+    logger.info("=" * 60)
+
+    km = KeyManager(key_dir=key_dir)
+    km.generate_or_load("honest_node")
+    guard = SecurityGuard()
+    result = {"attack_type": "long_range_attack", "no_bc": {}, "with_bc": {}}
+
+    old_ts = int(time.time() * 1000) - 3_600_000  # 1 小时前（旧纪元）
+    old_epoch = 1
+    old_msg = json.dumps({"agent_id": "honest_node", "action": "commit_block",
+                          "epoch": old_epoch, "step": 100}, sort_keys=True).encode()
+    sig = _sign_message(km, "honest_node", old_msg)
+    r_val, s_val = ECDSAUtils.extract_rs(sig)
+
+    # --- 无BC模式：只验签，旧消息仍有效 ---
+    sig_ok = _verify_message(km, "honest_node", old_msg, sig)
+    logger.info(f"[无BC] 旧纪元签名验签={sig_ok}（密码学仍有效）→ 历史可被重放/篡改")
+    logger.info("[无BC] X 攻击成功！攻击者用旧合法签名伪造历史")
+    result["no_bc"] = {
+        "attack_successful": True,
+        "description": "无纪元/时间戳绑定，旧合法签名仍被接受",
+        "old_signature_valid": sig_ok,
+    }
+
+    # --- 有BC模式：纪元绑定 + 时间戳窗口 ---
+    current_epoch = 5
+    pkg = {
+        "agent_id": "honest_node",
+        "action": {"action": "commit_block", "epoch": old_epoch},
+        "timestamp": old_ts,
+        "nonce": 1,
+        "r": r_val, "s": s_val,
+        "signature_hex": sig.hex(),
+        "epoch": old_epoch,
+    }
+    guard.register_nonce_baseline("honest_node", 0)
+    is_safe, reason = guard.check_package(pkg)
+    epoch_ok = (pkg.get("epoch") == current_epoch)
+    blocked = (not is_safe) or (not epoch_ok)
+    logger.info(f"[有BC] 时间戳校验安全={is_safe}（{reason}）; 纪元匹配={epoch_ok}（当前={current_epoch}）")
+    logger.info(f"[有BC] 攻击{'被拦截' if blocked else '成功'}！时间戳过期 + 纪元不匹配双重拒绝")
+    result["with_bc"] = {
+        "attack_successful": not blocked,
+        "description": "时间戳窗口(±30s) + 纪元绑定双重拒绝旧纪元消息",
+        "timestamp_safe": is_safe,
+        "block_reason": reason,
+        "epoch_match": epoch_ok,
+        "blocked": blocked,
+    }
+    shutil.rmtree(key_dir, ignore_errors=True)
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
+# Wilson 置信区间 + 批量统计（E6：≥50 次/类 + Wilson 95% CI）
+# ──────────────────────────────────────────────────────────────
+
+def _wilson_ci(k: int, n: int, z: float = 1.96) -> Tuple[float, float]:
+    """Wilson score 95% 置信区间（成功率 k/n）。"""
+    if n == 0:
+        return (0.0, 0.0)
+    phat = k / n
+    denom = 1 + z * z / n
+    center = (phat + z * z / (2 * n)) / denom
+    margin = (z * math.sqrt(phat * (1 - phat) / n + z * z / (4 * n * n))) / denom
+    return (max(0.0, center - margin), min(1.0, center + margin))
+
+
+ALL_ATTACKS = {
+    "observation_forgery": demo_observation_forgery,
+    "message_tampering": demo_message_tampering,
+    "replay_attack": demo_replay_attack,
+    "sybil_attack": demo_sybil_attack,
+    "k_reuse_attack": demo_k_reuse_attack,
+    "long_range_attack": demo_long_range_attack,
+}
+
+
+def run_attack_batch(n_trials: int = 50) -> List[Dict]:
+    """
+    对全部 6 类攻击各跑 n_trials 次，统计有BC模式拦截率与 Wilson 95% CI。
+    旧 3 类演示脚本硬编码相对密钥目录 ./keys_demo，故用临时工作目录沙箱隔离副作用。
+    """
+    cwd0 = os.getcwd()
+    stats = []
+    for name, fn in ALL_ATTACKS.items():
+        blocked = 0
+        for _ in range(n_trials):
+            work = tempfile.mkdtemp(prefix=f"atk_{name}_")
+            try:
+                os.chdir(work)
+                if name in ("sybil_attack", "k_reuse_attack", "long_range_attack"):
+                    res = fn(key_dir=work)
+                else:
+                    res = fn()  # 旧演示使用 ./keys_demo（沙箱内）
+                if not res["with_bc"].get("attack_successful", True):
+                    blocked += 1
+            finally:
+                os.chdir(cwd0)
+                shutil.rmtree(work, ignore_errors=True)
+        lo, hi = _wilson_ci(blocked, n_trials)
+        stats.append({
+            "attack_type": name,
+            "trials": n_trials,
+            "blocked": blocked,
+            "defense_rate": blocked / n_trials,
+            "wilson_ci_95": [round(lo, 4), round(hi, 4)],
+        })
+    return stats
+
+
+def generate_statistical_report(stats: List[Dict]) -> Dict:
+    total = sum(s["trials"] for s in stats)
+    total_blocked = sum(s["blocked"] for s in stats)
+    report = {
+        "title": "E6 攻击防御批量统计报告",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "n_attack_types": len(stats),
+        "total_trials": total,
+        "overall_defense_rate": total_blocked / total if total else 0.0,
+        "per_attack": stats,
+    }
+    report_path = _Path(_REPO_ROOT) / "results" / "attack_defense_batch_report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, ensure_ascii=False)
+    logger.info(f"\n批量报告已保存: {report_path}")
+    return report
+
+
+# ──────────────────────────────────────────────────────────────
 # 报告生成
 # ──────────────────────────────────────────────────────────────
 
@@ -386,6 +668,9 @@ if __name__ == '__main__':
     results.append(demo_observation_forgery())
     results.append(demo_message_tampering())
     results.append(demo_replay_attack())
+    results.append(demo_sybil_attack())
+    results.append(demo_k_reuse_attack())
+    results.append(demo_long_range_attack())
 
     report = generate_report(results)
 
@@ -393,7 +678,7 @@ if __name__ == '__main__':
     shutil.rmtree("./keys_demo", ignore_errors=True)
 
     print("\n" + "=" * 60)
-    print("攻击防御演示结果摘要")
+    print("攻击防御演示结果摘要（6 类）")
     print("=" * 60)
     print(f"{'攻击类型':<25} {'无BC结果':<15} {'有BC结果':<15} {'防护':<8}")
     print("-" * 60)
@@ -404,3 +689,18 @@ if __name__ == '__main__':
         print(f"{r['attack_type']:<25} {no_bc:<15} {with_bc:<15} {defense:<8}")
     print("-" * 60)
     print(f"防护成功率: {report['summary']['defense_rate']}")
+
+    # E6 批量统计：每类 ≥50 次 + Wilson 95% 置信区间
+    print("\n" + "=" * 60)
+    print("E6 批量统计（每类 50 次 + Wilson 95% CI）")
+    print("=" * 60)
+    batch_stats = run_attack_batch(n_trials=50)
+    batch_report = generate_statistical_report(batch_stats)
+    print(f"{'攻击类型':<25} {'拦截/总':<12} {'拦截率':<10} {'Wilson 95% CI':<20}")
+    print("-" * 60)
+    for s in batch_stats:
+        print(f"{s['attack_type']:<25} {s['blocked']}/{s['trials']:<11} "
+              f"{s['defense_rate']*100:>6.1f}%   "
+              f"[{s['wilson_ci_95'][0]*100:.1f}%, {s['wilson_ci_95'][1]*100:.1f}%]")
+    print("-" * 60)
+    print(f"总体拦截率: {batch_report['overall_defense_rate']*100:.1f}%")

@@ -26,6 +26,9 @@ class TestAttackTypes:
         'observation_forgery',
         'message_tampering',
         'replay_attack',
+        'sybil_attack',
+        'k_reuse_attack',
+        'long_range_attack',
         'byzantine',
     ])
     def test_attack_returns_blocked(self, client, atype):
@@ -39,9 +42,12 @@ class TestAttackTypes:
         'observation_forgery',
         'message_tampering',
         'replay_attack',
+        'sybil_attack',
+        'k_reuse_attack',
+        'long_range_attack',
     ])
     def test_no_bc_success_with_bc_blocked(self, client, atype):
-        """无BC攻击成功、有BC拦截（三种密码学攻击）"""
+        """无BC攻击成功、有BC拦截（六类攻击）"""
         data = client.get(f'/api/attack/inject?type={atype}').get_json()
         assert data['no_bc']['attack_successful'] is True
         assert data['with_bc']['attack_successful'] is False
@@ -60,11 +66,11 @@ class TestParamBoundaries:
         assert 'error' in r.get_json()
 
     def test_missing_type_defaults_all(self, client):
-        """无 type 参数 → 默认 all（3 种攻击）"""
+        """无 type 参数 → 默认 all（6 种攻击）"""
         r = client.get('/api/attack/inject')
         data = r.get_json()
         assert data['attack_type'] == 'all'
-        assert len(data['results']) == 3
+        assert len(data['results']) == 6
 
     def test_case_sensitive_type(self, client):
         """大小写敏感：大写类型 → 400（demos.get 精确匹配）"""
@@ -73,7 +79,7 @@ class TestParamBoundaries:
 
     def test_all_returns_three_results(self, client):
         data = client.get('/api/attack/inject?type=all').get_json()
-        assert len(data['results']) == 3
+        assert len(data['results']) == 6
         # 全部被拦截
         for res in data['results']:
             assert res['with_bc']['attack_successful'] is False

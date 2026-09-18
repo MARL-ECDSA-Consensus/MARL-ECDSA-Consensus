@@ -296,7 +296,7 @@ _attack_inject_lock = threading.Lock()
 def _route_api_attack_inject():
     """
     一键注入攻击演示 API
-    在网页上模拟各类攻击（观测伪造/消息篡改/重放/拜占庭主节点），
+    在网页上模拟各类攻击（观测伪造/消息篡改/重放/女巫/Sybil/签名k重用/长程/拜占庭主节点），
     对比"无区块链基线"与"MARL-ECDSA 区块链防护"的拦截效果。
     """
     attack_type = request.args.get('type', 'all')
@@ -359,6 +359,9 @@ def _route_api_attack_inject():
                 'observation_forgery': demo.demo_observation_forgery,
                 'message_tampering': demo.demo_message_tampering,
                 'replay_attack': demo.demo_replay_attack,
+                'sybil_attack': demo.demo_sybil_attack,
+                'k_reuse_attack': demo.demo_k_reuse_attack,
+                'long_range_attack': demo.demo_long_range_attack,
             }
             if attack_type == 'all':
                 results = [fn() for fn in demos.values()]
