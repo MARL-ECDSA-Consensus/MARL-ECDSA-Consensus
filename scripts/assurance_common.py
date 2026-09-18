@@ -667,9 +667,9 @@ def extract_pdf_strings(path: os.PathLike | str) -> List[str]:
     """从 PDF 原始字节中抽取 ``/Title`` ``/Author`` 等元数据串（NFR-4）。
 
     兼容两类中文编码：
-    1) PDF 规范的 UTF-16BE hex 串（``/Author <FEFF5F20...>``）；
+    1) PDF 规范的 UTF-16BE hex 串（``/Author <FEFF4E2D...>``）；
     2) 括号串 ``(...)`` 内的 UTF-8 字节（先按 latin-1 解码再还原 UTF-8，
-       避免 ``张敏杰`` 被解成 mojibake 而漏报）。
+       避免中文姓名被解成 mojibake 而漏报）。
     """
     try:
         raw = Path(path).read_bytes()
