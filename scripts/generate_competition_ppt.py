@@ -374,7 +374,7 @@ def create_summary_slide(slide, title):
         "✅ 四类安全攻击拦截率100%（消息篡改/身份伪造/k值重用/拜占庭）\n"
         "✅ 严格优势策略的参数边界推导与数值验证合作是严格优势策略（保守假设下安全裕度50%）\n"
         "✅ Welch t检验 p=0.126（不显著）| Cohen's d=0.47（小到中等效应）｜诚实标注检验力不足\n"
-        "✅ 300+源文件 | 1574测试用例 | 3大产业场景\n\n"
+        "✅ 300+源文件 | 1585测试用例 | 3大产业场景\n\n"
         "未来展望：\n"
         "🔮 后量子ECDSA → CRYSTALS-Dilithium迁移路径\n"
         "🔮 分片共识 → 100+智能体水平扩展（O(n²)→O(k²)）\n"
@@ -424,7 +424,7 @@ Four-layer architecture + Bidirectional empowerment loop
 BC → MARL: total_reward = env + λ·bc
 MARL → BC: behavior → contribution → CW-PBFT weights
 
-Key metrics: +29.2% (env_reward) | 100% | p=0.126 (not significant), d=0.47 | <5% | 1574 tests
+Key metrics: +29.2% (env_reward) | 100% | p=0.126 (not significant), d=0.47 | <5% | 1585 tests
 
 ---
 

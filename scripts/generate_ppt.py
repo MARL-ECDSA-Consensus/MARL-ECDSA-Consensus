@@ -290,8 +290,8 @@ def _slide_demo(prs):
 def _slide_testing(prs):
     """Slide 11: 测试与验证"""
     slide = prs.slides.add_slide(prs.slide_layouts[6]); add_slide_bg(slide)
-    add_title_box(slide, "测试与验证", "1574个单元测试 + 6类测试场景")
-    add_stat_card(slide, 0.5, 1.5, 2.8, 1.5, "1574", "单元测试", ACCENT_GREEN)
+    add_title_box(slide, "测试与验证", "1585个单元测试 + 6类测试场景")
+    add_stat_card(slide, 0.5, 1.5, 2.8, 1.5, "1585", "单元测试", ACCENT_GREEN)
     add_stat_card(slide, 3.6, 1.5, 2.8, 1.5, "100%", "通过率", ACCENT_GREEN)
     add_stat_card(slide, 6.7, 1.5, 2.8, 1.5, "6", "测试场景", ACCENT_BLUE)
     add_card(slide, 0.5, 3.3, 9, 3, "测试覆盖范围", ["S1 基线对比：Pure MARL vs BC-MARL（1000/3000回合）", "S2 自私鲁棒性：30%自私智能体下区块链激励效果", "S3 区块链安全：ECDSA签名验签 + SecurityGuard防护", "S4 共识稳定性：CW-PBFT多轮共识 100%成功率", "S5 λ参数敏感性：λ=0.1 vs 0.05 vs 0.3对比", "S6 收敛性分析：3000回合训练收敛曲线", "", "测试模块：ECDSA / SecurityGuard / Block / Blockchain / WorldState / CW-PBFT / IncentiveContract / SimpleSpreadEnv"], ACCENT_GOLD)
