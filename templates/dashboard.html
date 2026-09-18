@@ -22,31 +22,29 @@
 <!-- 粒子背景 -->
 <canvas id="particles"></canvas>
 
-<!-- 顶栏 -->
+<!-- 顶栏（左侧logo + 居中菜单 + 右侧操作） -->
 <div class="topbar">
     <div class="logo">
         <div class="icon">⬡</div>
         MARL-ECDSA 共识链
+    </div>
+    <div class="nav-tabs" id="nav-tabs">
+        <button class="nav-tab active" data-tab="overview">总览</button>
+        <button class="nav-tab" data-tab="monitor">训练监控</button>
+        <button class="nav-tab" data-tab="compare">对比分析</button>
+        <button class="nav-tab" data-tab="tri">三模式对比</button>
+        <button class="nav-tab" data-tab="blockchain">区块链</button>
+        <button class="nav-tab" data-tab="consensus">共识投票</button>
+        <button class="nav-tab" data-tab="explorer">区块浏览器</button>
+        <button class="nav-tab" data-tab="attack">攻防演示</button>
+        <button class="nav-tab" data-tab="system">系统</button>
+        <button class="nav-tab" data-tab="p2p">P2P网络</button>
     </div>
     <div class="topbar-right">
         <div class="mode-tag" id="top-mode">平台就绪</div>
         <button class="demo-btn" id="btn-demo" onclick="toggleDemoMode()" title="演示模式：自动轮播标签页（快捷键 P）">演示模式</button>
         <button class="export-btn" onclick="showExportModal()" title="导出报告（快捷键 E）">导出报告</button>
     </div>
-</div>
-
-<!-- 导航 -->
-<div class="nav-tabs" id="nav-tabs">
-    <button class="nav-tab active" data-tab="overview">总览</button>
-    <button class="nav-tab" data-tab="monitor">训练监控</button>
-    <button class="nav-tab" data-tab="compare">对比分析</button>
-    <button class="nav-tab" data-tab="tri">三模式对比</button>
-    <button class="nav-tab" data-tab="blockchain">区块链</button>
-    <button class="nav-tab" data-tab="consensus">共识投票</button>
-    <button class="nav-tab" data-tab="explorer">区块浏览器</button>
-    <button class="nav-tab" data-tab="attack">攻防演示</button>
-    <button class="nav-tab" data-tab="system">系统</button>
-    <button class="nav-tab" data-tab="p2p">P2P网络</button>
 </div>
 
 <!-- 主内容区 -->
@@ -109,7 +107,7 @@
                 </line>
 
                 <!-- Bottom: Results -->
-                <rect x="190" y="200" width="300" height="50" rx="10" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                <rect x="190" y="200" width="300" height="50" rx="10" fill="rgba(255,255,255,0.02)" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
                 <text x="340" y="220" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">实验验证：pure_marl vs bc_marl vs selfish</text>
                 <text x="340" y="240" text-anchor="middle" fill="#64748b" font-size="10">1000回合 · BC整体提升29.6% · ECDSA 75K签名 · 1K区块</text>
 
@@ -117,6 +115,31 @@
                 <text x="110" y="72" text-anchor="middle" fill="#64748b" font-size="9">决策 + 学习</text>
                 <text x="570" y="72" text-anchor="middle" fill="#64748b" font-size="9">激励 + 存证</text>
             </svg>
+        </div>
+
+        <!-- 业务指标卡片（企业后台风格：彩色图标 + 大数字） -->
+        <div class="metric-row">
+            <div class="metric-card orange">
+                <div class="metric-icon">🤖</div>
+                <div class="metric-body">
+                    <div class="metric-label">协同智能体</div>
+                    <div class="metric-value">3 <span class="metric-unit">个</span></div>
+                </div>
+            </div>
+            <div class="metric-card green">
+                <div class="metric-icon">🛡️</div>
+                <div class="metric-body">
+                    <div class="metric-label">攻击拦截率（6/6 类）</div>
+                    <div class="metric-value">100%</div>
+                </div>
+            </div>
+            <div class="metric-card purple">
+                <div class="metric-icon">⚖️</div>
+                <div class="metric-body">
+                    <div class="metric-label">共识模式</div>
+                    <div class="metric-value">CW-PBFT</div>
+                </div>
+            </div>
         </div>
 
         <!-- 快速入口卡片 -->
@@ -265,9 +288,9 @@
                 <text x="223" y="52" text-anchor="middle" fill="#34d399" font-size="11" font-weight="700">ECDSA签名</text>
                 <text x="223" y="68" text-anchor="middle" fill="#94a3b8" font-size="9">SHA256+ECDSA</text>
                 <text x="223" y="82" text-anchor="middle" fill="#94a3b8" font-size="8">RFC 6979 确定性k</text>
-                <!-- v3.4: 签名计数徽章 -->
-                <circle cx="270" cy="42" r="14" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"/>
-                <text id="ecdsa-sign-badge" x="270" y="46" text-anchor="middle" fill="#34d399" font-size="10" font-weight="700">0</text>
+                <!-- v3.4: 签名计数徽章（骑卡片右上角外侧，不压标题） -->
+                <circle cx="288" cy="30" r="12" fill="#ffffff" stroke="#34d399" stroke-width="1.5"/>
+                <text id="ecdsa-sign-badge" x="288" y="33" text-anchor="middle" fill="#34d399" font-size="8.5" font-weight="700">0</text>
                 <!-- Arrow 2→3 -->
                 <line x1="290" y1="65" x2="313" y2="65" stroke="rgba(251,191,36,0.4)" stroke-width="2" stroke-dasharray="4,3">
                     <animate attributeName="stroke-dashoffset" from="7" to="0" dur="1.5s" repeatCount="indefinite"/>
@@ -295,9 +318,9 @@
                 <text x="640" y="52" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">验签</text>
                 <text x="640" y="68" text-anchor="middle" fill="#94a3b8" font-size="8">公钥</text>
                 <text x="640" y="82" text-anchor="middle" fill="#94a3b8" font-size="8">验证</text>
-                <!-- v3.4: 验签计数徽章 -->
-                <circle cx="640" cy="42" r="10" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="1.2"/>
-                <text id="ecdsa-verify-badge" x="640" y="46" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">0</text>
+                <!-- v3.4: 验签计数徽章（骑卡片右上角内侧，不超出画布） -->
+                <circle cx="662" cy="28" r="9" fill="#ffffff" stroke="#38bdf8" stroke-width="1.2"/>
+                <text id="ecdsa-verify-badge" x="662" y="31" text-anchor="middle" fill="#38bdf8" font-size="7" font-weight="700">0</text>
 
                 <!-- Arrow 4→5 -->
                 <line x1="606" y1="65" x2="608" y2="65" stroke="rgba(56,189,248,0.3)" stroke-width="2"/>
@@ -362,9 +385,9 @@
                 <text x="80" y="48" text-anchor="middle" fill="#34d399" font-size="12" font-weight="700" filter="url(#glowSC)">SigningService</text>
                 <text x="80" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">ECDSA签名+SecurityGuard</text>
                 <text x="80" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">nonce递增防重放</text>
-                <!-- 签名计数徽章 -->
-                <circle cx="125" cy="40" r="12" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.2"/>
-                <text id="sc-sign-badge" x="125" y="44" text-anchor="middle" fill="#34d399" font-size="8" font-weight="700">0</text>
+                <!-- 签名计数徽章（骑卡片右上角外侧） -->
+                <circle cx="145" cy="25" r="11" fill="#ffffff" stroke="#34d399" stroke-width="1.2"/>
+                <text id="sc-sign-badge" x="145" y="28" text-anchor="middle" fill="#34d399" font-size="8" font-weight="700">0</text>
 
                 <!-- Arrow SigningService → ActionRecorder -->
                 <line x1="147" y1="67" x2="175" y2="67" stroke="rgba(52,211,153,0.4)" stroke-width="2" stroke-dasharray="5,3">
@@ -377,9 +400,9 @@
                 <text x="243" y="48" text-anchor="middle" fill="#38bdf8" font-size="12" font-weight="700" filter="url(#glowSC)">ActionRecorder</text>
                 <text x="243" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">行为缓冲→Transaction</text>
                 <text x="243" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">每10步批量上链</text>
-                <!-- 交易计数徽章 -->
-                <circle cx="288" cy="40" r="12" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="1.2"/>
-                <text id="sc-tx-badge" x="288" y="44" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">0</text>
+                <!-- 交易计数徽章（骑卡片右上角外侧） -->
+                <circle cx="308" cy="25" r="11" fill="#ffffff" stroke="#38bdf8" stroke-width="1.2"/>
+                <text id="sc-tx-badge" x="308" y="28" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">0</text>
 
                 <!-- Arrow ActionRecorder → CooperationDetector -->
                 <line x1="310" y1="67" x2="338" y2="67" stroke="rgba(56,189,248,0.4)" stroke-width="2" stroke-dasharray="5,3">
@@ -392,9 +415,9 @@
                 <text x="406" y="48" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700" filter="url(#glowSC)">CooperationDetector</text>
                 <text x="406" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">合作/背叛检测</text>
                 <text x="406" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">距离阈值0.5+累积</text>
-                <!-- 合作状态徽章 -->
-                <circle cx="451" cy="40" r="12" fill="rgba(251,191,36,0.15)" stroke="#fbbf24" stroke-width="1.2"/>
-                <text id="sc-coop-badge" x="451" y="44" text-anchor="middle" fill="#fbbf24" font-size="8" font-weight="700">0</text>
+                <!-- 合作状态徽章（骑卡片右上角外侧） -->
+                <circle cx="471" cy="25" r="11" fill="#ffffff" stroke="#fbbf24" stroke-width="1.2"/>
+                <text id="sc-coop-badge" x="471" y="28" text-anchor="middle" fill="#fbbf24" font-size="8" font-weight="700">0</text>
 
                 <!-- Arrow CooperationDetector → SettlementCoordinator -->
                 <line x1="473" y1="67" x2="501" y2="67" stroke="rgba(251,191,36,0.4)" stroke-width="2" stroke-dasharray="5,3">
@@ -407,9 +430,9 @@
                 <text x="584" y="48" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700" filter="url(#glowSC)">SettlementCoordinator</text>
                 <text x="584" y="65" text-anchor="middle" fill="#94a3b8" font-size="9">贡献度+激励结算+λ融合</text>
                 <text x="584" y="80" text-anchor="middle" fill="#94a3b8" font-size="8">weighted=0.4t+0.35c+0.25p</text>
-                <!-- 结算徽章 -->
-                <circle cx="634" cy="40" r="12" fill="rgba(129,140,248,0.15)" stroke="#818cf8" stroke-width="1.2"/>
-                <text id="sc-settle-badge" x="634" y="44" text-anchor="middle" fill="#818cf8" font-size="8" font-weight="700">λ</text>
+                <!-- 结算徽章（骑卡片右上角内侧，不超出画布） -->
+                <circle cx="655" cy="24" r="9" fill="#ffffff" stroke="#818cf8" stroke-width="1.2"/>
+                <text id="sc-settle-badge" x="655" y="27" text-anchor="middle" fill="#818cf8" font-size="7.5" font-weight="700">λ</text>
 
                 <!-- Bridge 编排器标注 -->
                 <rect x="15" y="120" width="650" height="30" rx="8" fill="rgba(52,211,153,0.03)" stroke="rgba(52,211,153,0.12)" stroke-width="1"/>
@@ -436,16 +459,16 @@
         </div>
 
         <!-- v3.8: 子组件独立统计卡片 -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;">
             <!-- SigningService -->
             <div class="stat-card-info" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.18);border-radius:12px;padding:14px;text-align:center;">
                 <div style="font-size:0.7rem;color:#34d399;font-weight:600;margin-bottom:4px;">SigningService</div>
                 <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:8px;">ECDSA签名+安全校验</div>
-                <div style="display:flex;justify-content:space-around;">
-                    <div><div style="font-size:0.6rem;color:#94a3b8;">签名</div><div class="animated-num" id="sc-sign-count" style="font-size:1.1rem;font-weight:700;color:#34d399;">0</div></div>
-                    <div><div style="font-size:0.6rem;color:#94a3b8;">验签</div><div class="animated-num" id="sc-verify-count" style="font-size:1.1rem;font-weight:700;color:#38bdf8;">0</div></div>
-                    <div><div style="font-size:0.6rem;color:#94a3b8;">安全通过</div><div class="animated-num" id="sc-sec-pass" style="font-size:1.1rem;font-weight:700;color:#34d399;">0</div></div>
-                    <div><div style="font-size:0.6rem;color:#94a3b8;">安全拒绝</div><div class="animated-num" id="sc-sec-fail" style="font-size:1.1rem;font-weight:700;color:#fbbf24;">0</div></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;text-align:center;">
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">签名</div><div class="animated-num" id="sc-sign-count" style="font-size:1.0rem;font-weight:700;color:#34d399;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">验签</div><div class="animated-num" id="sc-verify-count" style="font-size:1.0rem;font-weight:700;color:#38bdf8;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">安全通过</div><div class="animated-num" id="sc-sec-pass" style="font-size:1.0rem;font-weight:700;color:#34d399;">0</div></div>
+                    <div><div style="font-size:0.6rem;color:#94a3b8;">安全拒绝</div><div class="animated-num" id="sc-sec-fail" style="font-size:1.0rem;font-weight:700;color:#fbbf24;">0</div></div>
                 </div>
             </div>
             <!-- ActionRecorder -->
@@ -478,7 +501,7 @@
         </div>
 
         <!-- v3.4: 流水线统计面板 -->
-        <div class="pipeline-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+        <div class="pipeline-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;">
             <div class="stat-card-info" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.18);border-radius:12px;padding:14px;text-align:center;">
                 <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:6px;">ECDSA 签名次数</div>
                 <div class="animated-num" id="pl-sign-count" style="font-size:1.6rem;font-weight:700;color:#34d399;">0</div>
@@ -690,20 +713,20 @@
         </div>
         <div id="consensus-empty" class="empty-state" style="display:none"><span class="es-icon">⬡</span>本模式未启用区块链 · 共识数据不可用</div>
         <div class="chart-card full">
-            <h3>CW-PBFT 三阶段共识流程 <span style="font-size:0.75rem;color:#00d4ff;margin-left:8px;" id="consensus-anim-status">▶ 动画演示中</span></h3>
+            <h3>CW-PBFT 三阶段共识流程 <span style="font-size:0.75rem;color:#2563eb;margin-left:8px;" id="consensus-anim-status">▶ 动画演示中</span></h3>
             <div id="consensus-phases" style="display:flex;gap:20px;flex-wrap:wrap;margin-top:15px;">
-                <div id="consensus-phase-1" class="consensus-phase" style="flex:1;min-width:200px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:8px;padding:15px;transition:all 0.5s;">
-                    <h4 style="color:#00d4ff;">Phase 1: Pre-Prepare</h4>
+                <div id="consensus-phase-1" class="consensus-phase" style="flex:1;min-width:200px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.3);border-radius:8px;padding:15px;transition:all 0.5s;">
+                    <h4 style="color:#2563eb;">Phase 1: Pre-Prepare</h4>
                     <p style="font-size:0.85rem;color:#aaa;">主节点广播提案区块，包含交易列表和状态根</p>
                     <div style="margin-top:10px;font-size:0.8rem;color:#888;">阈值: 1 (仅主节点)</div>
                 </div>
                 <div id="consensus-phase-2" class="consensus-phase" style="flex:1;min-width:200px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:8px;padding:15px;transition:all 0.5s;">
-                    <h4 style="color:#00ff88;">Phase 2: Prepare</h4>
+                    <h4 style="color:#10b981;">Phase 2: Prepare</h4>
                     <p style="font-size:0.85rem;color:#aaa;">各节点验证提案，按贡献权重广播准备投票</p>
                     <div style="margin-top:10px;font-size:0.8rem;color:#888;">阈值: 2f+1 (按权重加权)</div>
                 </div>
                 <div id="consensus-phase-3" class="consensus-phase" style="flex:1;min-width:200px;background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.3);border-radius:8px;padding:15px;transition:all 0.5s;">
-                    <h4 style="color:#ffaa00;">Phase 3: Commit</h4>
+                    <h4 style="color:#f59e0b;">Phase 3: Commit</h4>
                     <p style="font-size:0.85rem;color:#aaa;">收集到足够准备投票后，广播提交投票</p>
                     <div style="margin-top:10px;font-size:0.8rem;color:#888;">阈值: 2f+1 (按权重加权)</div>
                 </div>
@@ -712,10 +735,10 @@
                 <h4 style="font-size:0.9rem;margin-bottom:8px;">CW-PBFT vs 标准PBFT 对比</h4>
                 <table style="width:100%;font-size:0.85rem;">
                     <tr style="color:#888;"><th style="text-align:left;padding:4px;">特性</th><th style="text-align:left;padding:4px;">标准PBFT</th><th style="text-align:left;padding:4px;">CW-PBFT</th></tr>
-                    <tr><td style="padding:4px;">投票权重</td><td style="padding:4px;">等权 1/n</td><td style="padding:4px;color:#00ff88;">按贡献度动态加权</td></tr>
-                    <tr><td style="padding:4px;">拜占庭容忍</td><td style="padding:4px;">n >= 3f+1</td><td style="padding:4px;color:#00ff88;">n >= 3f+1 (权重增强)</td></tr>
-                    <tr><td style="padding:4px;">极端拜占庭优势</td><td style="padding:4px;">33%时崩溃</td><td style="padding:4px;color:#00ff88;">33%时仍+10-23%成功率</td></tr>
-                    <tr><td style="padding:4px;">权重来源</td><td style="padding:4px;">N/A</td><td style="padding:4px;color:#00d4ff;">κ_task=0.40 / κ_coop=0.35 / κ_compliance=0.25</td></tr>
+                    <tr><td style="padding:4px;">投票权重</td><td style="padding:4px;">等权 1/n</td><td style="padding:4px;color:#10b981;">按贡献度动态加权</td></tr>
+                    <tr><td style="padding:4px;">拜占庭容忍</td><td style="padding:4px;">n >= 3f+1</td><td style="padding:4px;color:#10b981;">n >= 3f+1 (权重增强)</td></tr>
+                    <tr><td style="padding:4px;">极端拜占庭优势</td><td style="padding:4px;">33%时崩溃</td><td style="padding:4px;color:#10b981;">33%时仍+10-23%成功率</td></tr>
+                    <tr><td style="padding:4px;">权重来源</td><td style="padding:4px;">N/A</td><td style="padding:4px;color:#2563eb;">κ_task=0.40 / κ_coop=0.35 / κ_compliance=0.25</td></tr>
                 </table>
             </div>
         </div>
@@ -727,7 +750,7 @@
             <div class="stat-card"><div class="stat-label">链高度</div><div class="stat-value" id="ex-height">--</div><div class="stat-sub">最新区块号</div></div>
             <div class="stat-card"><div class="stat-label">总交易数</div><div class="stat-value" id="ex-txs">--</div><div class="stat-sub">链上行为存证</div></div>
             <div class="stat-card"><div class="stat-label">ECDSA签名</div><div class="stat-value" id="ex-sigs">--</div><div class="stat-sub">签名/验签次数</div></div>
-            <div class="stat-card"><div class="stat-label">链完整性</div><div class="stat-value" id="ex-valid" style="color:#00ff88;">--</div><div class="stat-sub">哈希链验证</div></div>
+            <div class="stat-card"><div class="stat-label">链完整性</div><div class="stat-value" id="ex-valid" style="color:#10b981;">--</div><div class="stat-sub">哈希链验证</div></div>
         </div>
         <div class="chart-grid">
             <div class="chart-card full">
@@ -735,7 +758,7 @@
                 <div style="max-height:400px;overflow-y:auto;">
                     <table style="width:100%;font-size:0.85rem;" id="ex-block-table">
                         <thead>
-                            <tr style="color:#888;border-bottom:1px solid rgba(255,255,255,0.1);">
+                            <tr style="color:#888;border-bottom:1px solid rgba(0,0,0,0.08);">
                                 <th style="text-align:left;padding:8px;">区块#</th>
                                 <th style="text-align:left;padding:8px;">哈希</th>
                                 <th style="text-align:left;padding:8px;">前驱哈希</th>
@@ -815,9 +838,12 @@
         <button class="demo-btn" onclick="injectAttack('message_tampering')" id="btn-att-tamper">✂️ 消息篡改攻击</button>
         <button class="demo-btn" onclick="injectAttack('replay_attack')" id="btn-att-replay">⏪ 重放攻击</button>
         <button class="demo-btn" onclick="injectAttack('byzantine')" id="btn-att-byz">☠️ 拜占庭主节点攻击</button>
+        <button class="demo-btn" onclick="injectAttack('sybil_attack')" id="btn-att-sybil">👥 女巫/Sybil 攻击</button>
+        <button class="demo-btn" onclick="injectAttack('k_reuse_attack')" id="btn-att-kreuse">🔑 k 值重用攻击</button>
+        <button class="demo-btn" onclick="injectAttack('long_range_attack')" id="btn-att-longrange">🕰 长程攻击</button>
         <button class="demo-btn" style="background:#f59e0b;color:#0f172a;" onclick="injectAttack('all')" id="btn-att-all">⚡ 一键注入全部攻击</button>
     </div>
-    <div id="attack-status" style="margin:12px 0;font-size:0.9rem;color:#00d4ff;min-height:20px;">点击上方按钮注入攻击，观察区块链安全机制如何拦截</div>
+    <div id="attack-status" style="margin:12px 0;font-size:0.9rem;color:#2563eb;min-height:20px;">点击上方按钮注入攻击，观察区块链安全机制如何拦截</div>
     <div id="attack-results" style="display:flex;flex-direction:column;gap:16px;"></div>
 </div>
 </div>
@@ -1887,10 +1913,15 @@ function drawP2PTopology(nodes, connections, activeNode) {
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
     
-    // Node positions (triangle layout)
+    // Node positions (3节点宽布局铺满画布；其他数量用圆形)
     const positions = nodes.map((_, i) => {
+        if (nodes.length === 3) {
+            if (i === 0) return { x: W * 0.5, y: H * 0.24 };
+            if (i === 1) return { x: W * 0.22, y: H * 0.76 };
+            return { x: W * 0.78, y: H * 0.76 };
+        }
         const angle = (i * 2 * Math.PI / nodes.length) - Math.PI / 2;
-        const r = 130;
+        const r = Math.min(W, H) * 0.36;
         return { x: W/2 + r * Math.cos(angle), y: H/2 + r * Math.sin(angle) };
     });
     
@@ -1923,8 +1954,8 @@ function drawP2PTopology(nodes, connections, activeNode) {
         // Glow
         const gradient = ctx.createRadialGradient(pos.x, pos.y, 10, pos.x, pos.y, 40);
         if (isActive) {
-            gradient.addColorStop(0, 'rgba(0, 255, 128, 0.6)');
-            gradient.addColorStop(1, 'rgba(0, 255, 128, 0)');
+            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.6)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
         } else {
             gradient.addColorStop(0, 'rgba(0, 150, 255, 0.4)');
             gradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
@@ -1977,7 +2008,7 @@ function loadConsensus() {
             const wData = Object.values(weights);
             const ce = document.getElementById('consensus-empty');
             if (ce) ce.style.display = (wData && wData.length) ? 'none' : 'flex';
-            const wColors = wLabels.map((_, i) => ['#00d4ff', '#00ff88', '#ffaa00', '#ff6b6b', '#a78bfa'][i % 5]);
+            const wColors = wLabels.map((_, i) => ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#6366f1'][i % 5]);
 
             createOrUpdateChart('chart-consensus-weights', 'bar', {
                 labels: wLabels,
@@ -1992,7 +2023,7 @@ function loadConsensus() {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: 'rgba(0,0,0,0.06)' } },
                     x: { ticks: { color: '#aaa' }, grid: { display: false } }
                 }
             });
@@ -2004,10 +2035,10 @@ function loadConsensus() {
                 datasets: [{
                     label: 'Shapley风格权重',
                     data: [cw.task_score || 0.40, cw.cooperation_score || 0.35, cw.compliance_score || 0.25],
-                    backgroundColor: 'rgba(0,212,255,0.15)',
-                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(37,99,235,0.15)',
+                    borderColor: '#2563eb',
                     borderWidth: 2,
-                    pointBackgroundColor: '#00d4ff',
+                    pointBackgroundColor: '#2563eb',
                     pointRadius: 5,
                 }]
             }, {
@@ -2018,8 +2049,8 @@ function loadConsensus() {
                         beginAtZero: true,
                         max: 0.5,
                         ticks: { color: '#666', backdropColor: 'transparent' },
-                        grid: { color: 'rgba(255,255,255,0.1)' },
-                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        grid: { color: 'rgba(0,0,0,0.08)' },
+                        angleLines: { color: 'rgba(0,0,0,0.08)' },
                         pointLabels: { color: '#aaa', font: { size: 13 } }
                     }
                 }
@@ -2038,7 +2069,7 @@ let consensusPhaseIndex = 0;
 function startConsensusPhaseAnimation() {
     if (consensusPhaseTimer) return;  // 已在运行
     const phases = ['consensus-phase-1', 'consensus-phase-2', 'consensus-phase-3'];
-    const colors = ['#00d4ff', '#00ff88', '#ffaa00'];
+    const colors = ['#2563eb', '#10b981', '#f59e0b'];
     const statusEl = document.getElementById('consensus-anim-status');
 
     function render() {
@@ -2073,7 +2104,7 @@ function loadBlockExplorer() {
             const ecdsa = data.ecdsa_stats || {};
             document.getElementById('ex-sigs').textContent = (ecdsa.sign_count || 0) + '/' + (ecdsa.verify_count || 0);
             document.getElementById('ex-valid').textContent = data.chain_valid ? 'OK' : 'FAIL';
-            document.getElementById('ex-valid').style.color = data.chain_valid ? '#00ff88' : '#ff6b6b';
+            document.getElementById('ex-valid').style.color = data.chain_valid ? '#10b981' : '#ef4444';
 
             // 渲染区块列表
             const tbody = document.getElementById('ex-blocks-body');
@@ -2081,12 +2112,12 @@ function loadBlockExplorer() {
             const ee = document.getElementById('explorer-empty');
             if (ee) ee.style.display = (blocks && blocks.length) ? 'none' : 'flex';
             tbody.innerHTML = blocks.map(b => `
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:8px;color:#00d4ff;font-family:monospace;">#${b.height}</td>
+                <tr style="border-bottom:1px solid rgba(0,0,0,0.06);">
+                    <td style="padding:8px;color:#2563eb;font-family:monospace;">#${b.height}</td>
                     <td style="padding:8px;color:#aaa;font-family:monospace;font-size:0.8rem;">${b.hash.substring(0,18)}...</td>
                     <td style="padding:8px;color:#666;font-family:monospace;font-size:0.8rem;">${b.prev_hash.substring(0,18)}...</td>
-                    <td style="padding:8px;color:#00ff88;">${b.proposer}</td>
-                    <td style="padding:8px;text-align:right;color:#ffaa00;">${b.tx_count}</td>
+                    <td style="padding:8px;color:#10b981;">${b.proposer}</td>
+                    <td style="padding:8px;text-align:right;color:#f59e0b;">${b.tx_count}</td>
                     <td style="padding:8px;color:#888;">${b.consensus}</td>
                 </tr>
             `).join('');
@@ -2099,8 +2130,8 @@ function loadBlockExplorer() {
                 datasets: [{
                     label: '交易数/区块',
                     data: txCounts,
-                    borderColor: '#00d4ff',
-                    backgroundColor: 'rgba(0,212,255,0.06)',
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37,99,235,0.06)',
                     borderWidth: 2,
                     pointRadius: 2,
                     fill: true,
@@ -2109,7 +2140,7 @@ function loadBlockExplorer() {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: 'rgba(0,0,0,0.06)' } },
                     x: { ticks: { color: '#666', maxTicksLimit: 10 }, grid: { display: false } }
                 }
             });
@@ -2119,7 +2150,7 @@ function loadBlockExplorer() {
             blocks.forEach(b => { proposerCounts[b.proposer] = (proposerCounts[b.proposer] || 0) + 1; });
             const pLabels = Object.keys(proposerCounts);
             const pData = Object.values(proposerCounts);
-            const pColors = pLabels.map((_, i) => ['#00d4ff', '#00ff88', '#ffaa00', '#ff6b6b'][i % 4]);
+            const pColors = pLabels.map((_, i) => ['#2563eb', '#10b981', '#f59e0b', '#ef4444'][i % 4]);
 
             createOrUpdateChart('chart-proposer-dist', 'doughnut', {
                 labels: pLabels,
@@ -2176,12 +2207,16 @@ function loadP2PData() {
                 }
                 
                 // Message log
-                if (data.recent_log) {
+                if (data.recent_log && data.recent_log.length > 0) {
                     let log = '';
                     data.recent_log.slice(-20).reverse().forEach(entry => {
-                        log += '<div style="padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.05);">' + entry + '</div>';
+                        log += '<div style="padding:2px 0; border-bottom:1px solid rgba(0,0,0,0.06);">' + entry + '</div>';
                     });
-                    document.getElementById('p2p-log').innerHTML = log || '<div style="color:#556;">暂无消息日志</div>';
+                    document.getElementById('p2p-log').innerHTML = log;
+                } else {
+                    // 无实时消息日志时如实留空，不生成任何占位数据
+                    document.getElementById('p2p-log').innerHTML =
+                        '<div style="color:#8a94a6;">暂无消息日志（P2P 网络未启用时无实时消息）</div>';
                 }
             }
             p2pDataLoaded = true;
@@ -2315,11 +2350,11 @@ async function injectAttack(type) {
         if (data.error) { status.textContent = '❌ ' + data.error; return; }
         attackInjected = true;
         status.textContent = '✅ 攻击注入完成，防护结果如下';
-        status.style.color = '#00ff88';
+        status.style.color = '#10b981';
         renderAttackResult(data);
     } catch(e) {
         status.textContent = '❌ 请求失败: ' + e.message;
-        status.style.color = '#ff6b6b';
+        status.style.color = '#ef4444';
     } finally {
         btnRow.querySelectorAll('button').forEach(b => b.disabled = false);
     }
@@ -2329,7 +2364,10 @@ const ATTACK_NAMES = {
     'observation_forgery': '观测伪造攻击',
     'message_tampering': '消息篡改攻击',
     'replay_attack': '重放攻击',
-    'byzantine_primary': '拜占庭主节点攻击'
+    'byzantine_primary': '拜占庭主节点攻击',
+    'sybil_attack': '女巫/Sybil 攻击',
+    'k_reuse_attack': 'k 值重用攻击',
+    'long_range_attack': '长程攻击'
 };
 
 function renderAttackResult(data) {
@@ -2349,7 +2387,7 @@ function renderAttackResult(data) {
         detailKeys.forEach(k => {
             const v = withBc[k];
             const vStr = (typeof v === 'object') ? JSON.stringify(v) : String(v);
-            detailsHtml += `<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:0.8rem;border-bottom:1px solid rgba(255,255,255,0.05);">
+            detailsHtml += `<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:0.8rem;border-bottom:1px solid rgba(0,0,0,0.06);">
                 <span style="color:#8899aa;">${k}</span><span style="color:#e2e8f0;font-family:monospace;text-align:right;">${vStr}</span></div>`;
         });
 
@@ -2362,12 +2400,12 @@ function renderAttackResult(data) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.25);border-radius:10px;padding:14px;">
                     <div style="font-size:0.85rem;color:#ff8a8a;margin-bottom:6px;">❌ 无区块链基线</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:#ff6b6b;margin-bottom:6px;">${noBcOk ? '攻击成功' : '—'}</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#ef4444;margin-bottom:6px;">${noBcOk ? '攻击成功' : '—'}</div>
                     <div style="font-size:0.85rem;color:#aab8c8;line-height:1.6;">${noBc.description || ''}</div>
                 </div>
                 <div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.25);border-radius:10px;padding:14px;">
                     <div style="font-size:0.85rem;color:#5eead4;margin-bottom:6px;">✅ MARL-ECDSA 区块链防护</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:${withBcOk ? '#ff6b6b' : '#00ff88'};margin-bottom:6px;">${withBcOk ? '攻击成功' : '攻击被拦截'}</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:${withBcOk ? '#ef4444' : '#10b981'};margin-bottom:6px;">${withBcOk ? '攻击成功' : '攻击被拦截'}</div>
                     <div style="font-size:0.85rem;color:#aab8c8;line-height:1.6;">${withBc.description || ''}</div>
                 </div>
             </div>
