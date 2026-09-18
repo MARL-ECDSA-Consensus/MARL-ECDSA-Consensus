@@ -94,7 +94,7 @@ python main.py --mode bc_marl --episodes 200
 python -c "from visualization.dashboard import start_dashboard; start_dashboard()"
 # 打开 http://127.0.0.1:9090
 
-# 5. 运行攻防演示（4 类攻击）
+# 5. 运行攻防演示（3 类攻击：观测伪造 / 消息篡改 / 重放）
 python scripts/legacy/analysis/attack_defense_demo.py
 ```
 
