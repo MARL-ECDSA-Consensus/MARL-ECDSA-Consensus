@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-1574%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-1585%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **English**: [README.md](README.md)
@@ -84,7 +84,7 @@
 # 1. 安装依赖（Python 3.11+）
 pip install -r requirements.txt
 
-# 2. 运行全量测试（1574 passed / 1 skipped）
+# 2. 运行全量测试（1585 passed / 2 skipped）
 python -m pytest tests/ -q
 
 # 3. 运行训练实验（pure / bc / selfish）
@@ -115,11 +115,11 @@ python scripts/legacy/analysis/attack_defense_demo.py
 
 - **BC vs Pure（`env_reward`）**：相对提升 +29.2%，**n=22，p=0.126 —— 方向一致但未达显著**（种子方差 sd≈5.5 限制了检验力）。
 - **对照口径（非头号）**：V3.7（500 回合，未收敛）env_reward +13.4%；V2（1000 回合）total_reward +29.6%（含 BC 激励）。
-- **抗背叛**：BC 激励与惩罚设计使背叛率保持 0%，避免背叛崩溃。
-- **CW-PBFT vs PBFT**：33% 拜占庭比例下共识成功率 +10–23%。
-- **攻击防御**：观测伪造 / 消息篡改 / 重放 / 拜占庭主节点 100% 拦截。
+- **抗背叛**：BC 激励与惩罚设计显著抑制背叛（3 智能体 BC 组 `mean_betrayal_rate ≈ 0.01`，对照 `selfish` 模式 0.35），避免背叛崩溃。
+- **CW-PBFT vs PBFT —— 优势的适用边界（如实报告）**：在**已把故障先验编码进权重**的合成权重下（展宽比 R≈8），CW-PBFT 在 40% 拜占庭时仍达 97–99%，而标准 PBFT 归零。但 **5 种子 × 2000 轮重复实验**表明：当权重为**均匀分布（R=1）**或由**真实 MARL 贡献度**导出（**R≈1.007**）时，CW-PBFT 与标准 PBFT **完全等价**。即**加权投票本身不提供额外容错**——安全条件为 `b < n/(2R+1)`，R≈1.007 时退化为经典 `n/3`。
+- **攻击防御**：**3 类**签名层攻击（观测伪造 / 消息篡改 / 重放）**100% 拦截**（见 `attack_defense_report.json`）；拜占庭主节点场景由 failover 测试套件单独覆盖。
 
-> **项目定位**：MARL-ECDSA 共识链的价值主张是 **信任增强** —— 拜占庭容错共识、密码学身份锚定、三类攻击 100% 拦截 + 拜占庭主节点failover测试通过、激励公平可验证，而非强化学习性能优化。BC 对环境奖励的增益为**正向趋势但统计不显著**，我们如实报告。
+> **项目定位**：MARL-ECDSA 共识链的价值主张是 **信任增强** —— 拜占庭容错共识、密码学身份锚定、三类攻击 100% 拦截 + 拜占庭主节点failover测试通过、激励公平可验证，而非强化学习性能优化。BC 对环境奖励的增益为**正向趋势但统计不显著**，我们如实报告。**CW-PBFT 的容错优势同样有明确适用边界**（见上：R 判据，真实贡献度下无增益）。
 
 ---
 
@@ -139,15 +139,14 @@ marl-ecdsa-consensus-chain/
 │   └── integration/  # 桥接、自私智能体、合作检测、自适应 λ
 ├── visualization/    # Flask 可视化面板（攻防演示、共识动画）
 ├── scripts/          # export_dataset.py、benchmark、ablation、一键启动脚本
-├── tests/            # 142 个测试模块（1574 passed / 1 skipped）
-└── docs/             # 验证与覆盖文档
+├── tests/            # 144 个测试模块（1585 passed / 2 skipped）
 ```
 
 ---
 
 ## 🧪 测试
 
-- **1574 passed / 1 skipped / 0 failed**（共收集 1575 项），覆盖 142 个测试模块：共识、密码学安全（RFC 6979、k 值重用、重放）、区块链、MARL 集成、P2P 网络、Dashboard 攻防 API。
+- **1585 passed / 2 skipped / 0 failed**（共收集 1587 项），覆盖 144 个测试模块：共识、密码学安全（RFC 6979、k 值重用、重放）、区块链、MARL 集成、P2P 网络、Dashboard 攻防 API。
 - 静态检查：`python -m compileall -q blockchain/ marl/ visualization/`。
 
 ---
@@ -156,9 +155,9 @@ marl-ecdsa-consensus-chain/
 
 | 工作流 | 触发 | 用途 |
 |---|---|---|
-| `ci.yml` | push / PR / 每日 cron `15 2 * * *` | 跑全量测试（py3.11/3.12）+ 追加审查日志 |
-| `hourly-heartbeat.yml` | cron `0 * * * *` / 手动 | 每小时活动心跳日志 |
-| `daily-contribution.yml` | cron `30 1 * * *` | 每日活动提交 |
+| `ci.yml` | push / PR | 跑全量测试（py3.11/3.12） |
+
+> 本仓库**不含任何定时提交 / 自动提交工作流**，也不含任何活动量刷取（activity farming）自动化。
 
 ---
 

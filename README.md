@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-1574%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-1585%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **中文版**: [README.zh.md](README.zh.md)
@@ -84,7 +84,7 @@ Data flow: `ECDSA sign → SecurityGuard check → Transaction → Block → CW-
 # 1. Install dependencies (Python 3.11+)
 pip install -r requirements.txt
 
-# 2. Run full test suite (1574 passed / 1 skipped)
+# 2. Run full test suite (1585 passed / 2 skipped)
 python -m pytest tests/ -q
 
 # 3. Run a training experiment (pure vs bc vs selfish)
@@ -115,11 +115,11 @@ Set `consensus_mode` in `config.json`: `cw_pbft` (default) / `standard_pbft` / `
 
 - **BC vs Pure (`env_reward`)**: +29.2% relative, **n=22, p=0.126 — direction-consistent but not significant** (test power limited by seed variance, sd ≈ 5.5).
 - **Reference calibers (not headline)**: V3.7 (500 episodes, not converged) env_reward +13.4%; V2 (1000 episodes) total_reward +29.6% (includes the BC incentive).
-- **Anti-betrayal**: the BC incentive and penalty design hold the betrayal rate at 0% and prevent defection collapse.
-- **CW-PBFT vs PBFT**: +10–23% consensus success at a 33% Byzantine ratio.
-- **Attack defense**: 100% interception for observation forgery / message tampering / replay / Byzantine primary.
+- **Anti-betrayal**: the BC incentive and penalty design suppress defection (betrayal rate ≈0.01 in the 3-agent BC runs, vs 0.35 under the `selfish` mode) and prevent defection collapse.
+- **CW-PBFT vs PBFT — scope of the advantage (honest reporting)**: with **synthetic** weights that already encode the fault prior (spread ratio R≈8), CW-PBFT reaches 97–99% success where standard PBFT collapses to 0% at 40% Byzantine. However, a 5-seed × 2000-round repetition experiment shows that under **uniform weights (R=1)** or weights derived from **real MARL contribution scores (R≈1.007)**, CW-PBFT is **exactly equivalent** to standard PBFT. Weighted voting therefore adds no fault tolerance on its own; the safety bound is `b < n/(2R+1)`, which for R≈1.007 reduces to the classical `n/3`.
+- **Attack defense**: 100% interception for the **3** signature-layer attacks (observation forgery / message tampering / replay) recorded in `attack_defense_report.json`; Byzantine-primary failover is covered separately by the failover test suite.
 
-> **Positioning**: the value proposition is **trust augmentation** — Byzantine-fault-tolerant consensus, cryptographic identity anchoring, 100% attack interception and verifiable incentive fairness — rather than RL performance optimization. The BC effect on `env_reward` is a positive trend that is **not statistically significant**, and we report it honestly.
+> **Positioning**: the value proposition is **trust augmentation** — Byzantine-fault-tolerant consensus, cryptographic identity anchoring, 100% interception of the signature-layer attacks and verifiable incentive fairness — rather than RL performance optimization. The BC effect on `env_reward` is a positive trend that is **not statistically significant**, and we report it honestly. Note also the bounded scope of the CW-PBFT advantage documented above.
 
 ---
 
@@ -139,15 +139,14 @@ marl-ecdsa-consensus-chain/
 │   └── integration/  # Bridge, SelfishAgent, CooperationDetector, AdaptiveLambda
 ├── visualization/    # Flask Dashboard (attack demo, consensus animation)
 ├── scripts/          # export_dataset.py, benchmark, ablation, one-click launchers
-├── tests/            # 142 test modules (1574 passed / 1 skipped)
-└── docs/             # Verification & coverage docs
+└── tests/            # 144 test modules (1585 passed / 2 skipped)
 ```
 
 ---
 
 ## 🧪 Testing
 
-- **1574 tests passed / 1 skipped / 0 failed** (1575 collected) across 142 test modules: consensus, crypto security (RFC 6979, k-reuse, replay), blockchain, MARL integration, P2P network, dashboard attack API.
+- **1585 tests passed / 2 skipped / 0 failed** (1587 collected) across 144 test modules: consensus, crypto security (RFC 6979, k-reuse, replay), blockchain, MARL integration, P2P network, dashboard attack API.
 - Static checks: `python -m compileall -q blockchain/ marl/ visualization/`.
 
 ---
@@ -156,9 +155,9 @@ marl-ecdsa-consensus-chain/
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push / PR / daily cron `15 2 * * *` | Run the full test suite (py3.11/3.12) + append review log |
-| `hourly-heartbeat.yml` | cron `0 * * * *` / manual | Hourly activity heartbeat log |
-| `daily-contribution.yml` | cron `30 1 * * *` | Daily activity commit |
+| `ci.yml` | push / PR | Run the full test suite (py3.11/3.12) |
+
+> There are **no scheduled or auto-committing workflows**: the repository contains no activity-farming / self-committing automation.
 
 ---
 
