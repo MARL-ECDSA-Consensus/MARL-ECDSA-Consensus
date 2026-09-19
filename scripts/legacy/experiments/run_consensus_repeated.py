@@ -11,6 +11,11 @@ run_consensus_repeated.py — 共识对比的重复实验 + 权重来源诊断�
   关键：legacy 里拜占庭被人工压到 0.2（"协议事先知道谁是坏节点"）；uniform/contribution
         不做这种特殊降权 —— 这才是"贡献度加权能否带来额外容错"的诚实检验。
 
+⚠ 假象对照组声明（2026-09-19）：legacy 档构造权重时直接读取 byzantine_ids，
+  等于协议事先知道谁是坏节点，其增益属**实验假象**，**禁止作为创新点申报**；
+  仅作 artifact control 保留（数值不改）。输出 JSON 中对 legacy 行强制加
+  is_artifact_control=true 与 warning 字段。
+
 纯标准库，零第三方依赖。python3 直接跑。
 """
 import sys, os, json, random, hashlib, time, statistics as st
@@ -30,6 +35,11 @@ SEEDS = [42, 123, 456, 789, 1024]
 def make_weights(mode, node_ids, byzantine_ids, scores):
     w = {}
     if mode == "legacy":
+        # ⚠ 实验假象对照组（2026-09-19 标注）：
+        #    本分支直接读取 byzantine_ids —— 即协议"事先知道谁是坏节点"，
+        #    并把坏节点权重手工压到 0.2。真实系统无法预知坏节点身份。
+        #    该档产生的增益属实验假象，**禁止作为创新点申报**；
+        #    仅保留为对照（artifact control）。数值不做修改，以保持历史可比性。
         for nid in node_ids:
             if nid in byzantine_ids:
                 w[nid] = 0.2
@@ -90,7 +100,7 @@ def run_repeated(n_nodes, byz_ratio, n_rounds, weight_mode, scores=None):
         c, cw = simulate(CWPBFTConsensus, n_nodes, byz_ratio, n_rounds, weight_mode, s, scores)
         sd, _ = simulate(StandardPBFTConsensus, n_nodes, byz_ratio, n_rounds, None, s, scores)
         cw_rates.append(c); std_rates.append(sd)
-    return {
+    res = {
         "n_nodes": n_nodes, "byzantine_ratio": byz_ratio, "weight_mode": weight_mode,
         "n_seeds": len(SEEDS), "n_rounds": n_rounds,
         "cw_mean": st.mean(cw_rates), "cw_sd": st.pstdev(cw_rates),
@@ -100,6 +110,17 @@ def run_repeated(n_nodes, byz_ratio, n_rounds, weight_mode, scores=None):
         "R": r_ratio(make_weights(weight_mode, [f"node_{i}" for i in range(n_nodes)],
                                   set(f"node_{i}" for i in range(int(n_nodes*byz_ratio))), scores or {})) if weight_mode else None,
     }
+    # 假象对照标记：legacy 档预知坏节点身份，输出中强制标注，防止被误当作创新点引用
+    if weight_mode == "legacy":
+        res["is_artifact_control"] = True
+        res["warning"] = (
+            "legacy 权重档在构造权重时直接读取拜占庭身份集合（坏节点 w=0.2、"
+            "诚实节点 1.0+0.3*(idx%3)），等于协议事先知道谁是坏节点。"
+            "该增益是实验假象，仅作对照组，禁止作为创新点申报。"
+        )
+    else:
+        res["is_artifact_control"] = False
+    return res
 
 
 def main():

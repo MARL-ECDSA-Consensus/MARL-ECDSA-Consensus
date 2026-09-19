@@ -10,6 +10,13 @@ P0-D 修复（2026-09-01）：
 核心差异体现：
 - Standard PBFT：需要 2n/3 个节点投票（按节点数），拜占庭/丢包节点不投票 → 难达阈值
 - CW-PBFT：需要 2/3 总权重，高贡献诚实节点权重高 → 少数诚实节点即可达阈值
+
+⚠ 假象对照组声明（2026-09-19）：
+本脚本的 CW-PBFT 权重是**硬编码**的：拜占庭节点 w=0.2、其余节点 1.0+0.3*(idx%3)。
+构造权重时直接读取了 byzantine_ids，即协议事先知道谁是坏节点 —— 真实系统做不到。
+因此本脚本报告的 CW 增益属**实验假象**，仅作 artifact control 保留，
+**禁止作为创新点申报**；数值不做修改以保持历史可比性。
+输出 JSON 中带 is_artifact_control=true 与 warning 字段。
 """
 
 # ===== 自动注入: 仓库根路径 (legacy 移动兼容) =====
@@ -83,6 +90,13 @@ def simulate_consensus(
     engine = consensus_class(node_id='node_0', consensus_nodes=node_ids)
 
     # CW-PBFT：设置差异化权重（高贡献节点更高权重）
+    #
+    # ⚠ 实验假象对照组（2026-09-19 标注）：
+    #    下面这段直接读取 byzantine_ids —— 即协议"事先知道谁是坏节点"，
+    #    并把坏节点权重手工压到 0.2、诚实节点按 1.0+0.3*(idx%3) 硬编码。
+    #    真实系统中坏节点身份不可预知，因此本档的增益属实验假象，
+    #    **禁止作为创新点申报**；仅作 artifact control 保留。
+    #    数值与逻辑不做修改，以保持与历史 report 的可比性。
     if use_weights and consensus_class == CWPBFTConsensus:
         for nid in node_ids:
             if nid in byzantine_ids:
@@ -124,7 +138,7 @@ def simulate_consensus(
     if use_weights and consensus_class == CWPBFTConsensus:
         final_weights = engine.get_weights()
 
-    return {
+    result = {
         'n_nodes': n_nodes,
         'byzantine_ratio': byzantine_ratio,
         'n_byzantine': n_byzantine,
@@ -137,13 +151,31 @@ def simulate_consensus(
         'max_latency_ms': round(max(latencies), 3) if latencies else 0.0,
         'final_weights': final_weights,
     }
+    # 假象对照标记：本脚本的 CW 权重为硬编码且预知坏节点身份 → 输出强制标注
+    if use_weights and consensus_class == CWPBFTConsensus:
+        result['is_artifact_control'] = True
+        result['warning'] = (
+            'CW-PBFT 权重为硬编码（拜占庭 w=0.2、诚实 1.0+0.3*(idx%3)），'
+            '构造时直接读取拜占庭身份集合，等于协议事先知道谁是坏节点。'
+            '该增益是实验假象，仅作对照组，禁止作为创新点申报。'
+        )
+    return result
 
 
 def main():
     logger.info(f"=== CW-PBFT vs Standard PBFT v3 (native byzantine) ===")
     logger.info(f"节点数: {NODE_COUNTS}, 拜占庭比例: {BYZANTINE_RATIOS}, 每配置{N_ROUNDS}轮")
 
-    results = {'cw_pbft': [], 'standard_pbft': [], 'comparison': []}
+    results = {
+        'cw_pbft': [], 'standard_pbft': [], 'comparison': [],
+        # 全局假象标记：本脚本所有 CW 行的权重均硬编码且预知坏节点身份
+        'is_artifact_control': True,
+        'artifact_warning': (
+            '本报告中 CW-PBFT 的权重为硬编码（拜占庭 w=0.2、诚实 1.0+0.3*(idx%3)），'
+            '构造时直接读取拜占庭身份集合，等于协议事先知道谁是坏节点。'
+            '相应增益属实验假象，仅作对照组，禁止作为创新点申报。'
+        ),
+    }
     total_configs = len(NODE_COUNTS) * len(BYZANTINE_RATIOS)
     config_idx = 0
 

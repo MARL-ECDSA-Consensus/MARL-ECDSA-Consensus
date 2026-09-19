@@ -491,13 +491,25 @@ def cohens_d(a: Sequence[float], b: Sequence[float]) -> float:
 
 
 def ci95_diff(a: Sequence[float], b: Sequence[float]) -> Tuple[float, float, float]:
-    """差值的 95% 置信区间（Welch 自由度）。返回 ``(lo, hi, df)``。"""
+    """差值的 95% 置信区间（Welch 自由度）。返回 ``(lo, hi, df)``。
+
+    退化情形（与 welch_ttest:475 保持一致，禁止抛异常）：
+        样本 < 2               → (nan, nan, 0.0)
+        两组方差同时为 0（se==0）→ (d, d, 0.0)，即区间退化为点估计。
+        典型触发场景：CW-PBFT 与 STD 逐 seed 结果**完全相同**（IDENTICAL 档），
+        此时 v1 == v2 == 0，原实现会因 Welch 自由度分母为 0 抛 ZeroDivisionError。
+        df=0.0 与 welch_ttest 的退化约定一致，调用方可据此判定"不可检验"。
+    """
     if len(a) < 2 or len(b) < 2:
         return (float("nan"), float("nan"), 0.0)
     n1, n2 = len(a), len(b)
     v1, v2 = variance(a), variance(b)
-    se = math.sqrt(v1 / n1 + v2 / n2)
-    df = (v1 / n1 + v2 / n2) ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
+    se2 = v1 / n1 + v2 / n2
+    if se2 <= 0.0:
+        d0 = mean(a) - mean(b)
+        return (d0, d0, 0.0)
+    se = math.sqrt(se2)
+    df = se2 ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
     tc = student_t_ppf(0.975, df)
     d = mean(a) - mean(b)
     return (d - tc * se, d + tc * se, df)
