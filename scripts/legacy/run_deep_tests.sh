@@ -1,7 +1,7 @@
 #!/bin/bash
 # 深度测试 bash 编排器 (后台兼容版, 断点续跑)
 PYTHON="python"
-cd "E:/Program/MARL/【CCF】区块链AI协同：面向MARL的共识机制/marl-ecdsa-consensus-chain"
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mkdir -p results/ablation results/convergence_3000 results/hp_sweep
 
 run() {

@@ -10,7 +10,8 @@
 """
 import subprocess, sys, os, time, json
 
-PYTHON = 'C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/python.exe'
+# 便携化: 使用当前解释器, 避免硬编码本机绝对路径
+PYTHON = sys.executable or 'python'
 BASE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.join(BASE, 'results')
 os.makedirs(os.path.join(RESULTS, 'ablation'), exist_ok=True)
