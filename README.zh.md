@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-1585%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-1603%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **English**: [README.md](README.md)
@@ -84,7 +84,7 @@
 # 1. 安装依赖（Python 3.11+）
 pip install -r requirements.txt
 
-# 2. 运行全量测试（1585 passed / 2 skipped）
+# 2. 运行全量测试（1603 passed / 2 skipped）
 python -m pytest tests/ -q
 
 # 3. 运行训练实验（pure / bc / selfish）
@@ -94,7 +94,7 @@ python main.py --mode bc_marl --episodes 200
 python -c "from visualization.dashboard import start_dashboard; start_dashboard()"
 # 打开 http://127.0.0.1:9090
 
-# 5. 运行攻防演示（3 类攻击：观测伪造 / 消息篡改 / 重放）
+# 5. 运行攻防演示（6 类攻击：观测伪造 / 消息篡改 / 重放 / 女巫·Sybil / k 值重用 / 长程）
 python scripts/legacy/analysis/attack_defense_demo.py
 ```
 
@@ -118,7 +118,7 @@ python scripts/legacy/analysis/attack_defense_demo.py
 - **全程平均合作率 —— 唯一统计显著的正向结果**：3000 回合全程平均，BC 组 **0.6223 ± 0.0090** vs Pure 组 **0.6143 ± 0.0072**（每组 n=22），即 **+0.0080（+1.30%），Welch p=0.0022，Cohen d=0.985** —— **显著且为大效应**。⚠️ 此口径（全程平均）与头号指标的"后 50 回合"口径**不同，禁止混用**（后 50 回合口径下两组几乎相同：差 0.0005、p=0.939）。
 - **抗背叛**：`avg_betrayal_rate` 在**全部 44 次运行中恒为 0.000**（22 种子 × 2 模式，各 3000 回合）；对照 `selfish` 模式约 0.35。BC 激励/惩罚设计可避免背叛崩溃。
 - **CW-PBFT vs PBFT —— 优势的适用边界（如实报告）**：在**已把故障先验编码进权重**的合成权重下（展宽比 R≈8），CW-PBFT 在 40% 拜占庭时仍达 97–99%，而标准 PBFT 归零。但 **5 种子 × 2000 轮重复实验**表明：当权重为**均匀分布（R=1）**或由**真实 MARL 贡献度**导出（**R≈1.007**）时，CW-PBFT 与标准 PBFT **完全等价**。即**加权投票本身不提供额外容错**——安全条件为 `b < n/(2R+1)`，R≈1.007 时退化为经典 `n/3`。
-- **攻击防御**：**3 类**签名层攻击（观测伪造 / 消息篡改 / 重放）**100% 拦截**（见 `attack_defense_report.json`）；拜占庭主节点场景由 failover 测试套件单独覆盖。
+- **攻击防御**：**6 类**签名层攻击（观测伪造 / 消息篡改 / 重放 / 女巫·Sybil / k 值重用 / 长程）**100% 拦截**（见 `attack_defense_report.json` 与批量统计 `results/attack_defense_batch_report.json`）；拜占庭主节点场景由 failover 测试套件单独覆盖。
 
 > **项目定位**：MARL-ECDSA 共识链的价值主张是 **信任增强** —— 拜占庭容错共识、密码学身份锚定、六类攻击 100% 拦截（观测伪造/消息篡改/重放/女巫·Sybil/k 值重用/长程）+ 拜占庭主节点failover测试通过、激励公平可验证，而非强化学习性能优化。BC 对环境奖励的增益为**正向趋势但统计不显著**，我们如实报告。**这不等于本项目没有显著结果**：激励机制的**设计目标**是塑造协作，而全程合作率的提升是**统计显著**的（p=0.0022，d=0.985）。**CW-PBFT 的容错优势同样有明确适用边界**（见上：R 判据，真实贡献度下无增益）。
 
@@ -140,14 +140,14 @@ marl-ecdsa-consensus-chain/
 │   └── integration/  # 桥接、自私智能体、合作检测、自适应 λ
 ├── visualization/    # Flask 可视化面板（攻防演示、共识动画）
 ├── scripts/          # export_dataset.py、benchmark、ablation、一键启动脚本
-├── tests/            # 144 个测试模块（1585 passed / 2 skipped）
+├── tests/            # 144 个测试模块（1603 passed / 2 skipped）
 ```
 
 ---
 
 ## 🧪 测试
 
-- **1585 passed / 2 skipped / 0 failed**（共收集 1587 项），覆盖 144 个测试模块：共识、密码学安全（RFC 6979、k 值重用、重放）、区块链、MARL 集成、P2P 网络、Dashboard 攻防 API。
+- **1603 passed / 2 skipped / 0 failed**（共收集 1605 项），覆盖 144 个测试模块：共识、密码学安全（RFC 6979、k 值重用、重放）、区块链、MARL 集成、P2P 网络、Dashboard 攻防 API。
 - 静态检查：`python -m compileall -q blockchain/ marl/ visualization/`。
 
 ---

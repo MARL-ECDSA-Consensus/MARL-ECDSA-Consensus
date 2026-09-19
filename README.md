@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-1585%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-1603%20passed-brightgreen)](tests/)
 [![Consensus](https://img.shields.io/badge/Consensus-CW--PBFT-00d4ff)](blockchain/consensus/cw_pbft.py)
 
 **中文版**: [README.zh.md](README.zh.md)
@@ -84,7 +84,7 @@ Data flow: `ECDSA sign → SecurityGuard check → Transaction → Block → CW-
 # 1. Install dependencies (Python 3.11+)
 pip install -r requirements.txt
 
-# 2. Run full test suite (1585 passed / 2 skipped)
+# 2. Run full test suite (1603 passed / 2 skipped)
 python -m pytest tests/ -q
 
 # 3. Run a training experiment (pure vs bc vs selfish)
@@ -94,7 +94,7 @@ python main.py --mode bc_marl --episodes 200
 python -c "from visualization.dashboard import start_dashboard; start_dashboard()"
 # open http://127.0.0.1:9090
 
-# 5. Run the attack-defense demo (4 attack types)
+# 5. Run the attack-defense demo (6 attack types)
 python scripts/legacy/analysis/attack_defense_demo.py
 ```
 
@@ -118,7 +118,7 @@ Set `consensus_mode` in `config.json`: `cw_pbft` (default) / `standard_pbft` / `
 - **Whole-run cooperation rate — the one statistically significant result**: over the full 3000-episode run, BC-MARL averages **0.6223 ± 0.0090** vs Pure-MARL **0.6143 ± 0.0072** (n=22/group), i.e. **+0.0080 (+1.30%), Welch p = 0.0022, Cohen d = 0.985** — a significant, large-effect improvement. Note this is a *different caliber* from the `env_reward` headline above (whole-run average vs last-50 average) and the two must not be mixed.
 - **Anti-betrayal**: `avg_betrayal_rate` is **exactly 0.000 in all 44 runs** (22 seeds × 2 modes, 3000 episodes each); the `selfish` control mode averages 0.35. The BC incentive/penalty design therefore prevents defection collapse.
 - **CW-PBFT vs PBFT — scope of the advantage (honest reporting)**: with **synthetic** weights that already encode the fault prior (spread ratio R≈8), CW-PBFT reaches 97–99% success where standard PBFT collapses to 0% at 40% Byzantine. However, a 5-seed × 2000-round repetition experiment shows that under **uniform weights (R=1)** or weights derived from **real MARL contribution scores (R≈1.007)**, CW-PBFT is **exactly equivalent** to standard PBFT. Weighted voting therefore adds no fault tolerance on its own; the safety bound is `b < n/(2R+1)`, which for R≈1.007 reduces to the classical `n/3`.
-- **Attack defense**: 100% interception for the **3** signature-layer attacks (observation forgery / message tampering / replay) recorded in `attack_defense_report.json`; Byzantine-primary failover is covered separately by the failover test suite.
+- **Attack defense**: 100% interception for the **6** signature-layer attacks (observation forgery / message tampering / replay / sybil / k-reuse / long-range) recorded in `attack_defense_report.json` and the E6 batch report `results/attack_defense_batch_report.json` (6 classes × 50 trials = 300, 100% blocked); Byzantine-primary failover is covered separately by the failover test suite.
 
 > **Positioning**: the value proposition is **trust augmentation** — Byzantine-fault-tolerant consensus, cryptographic identity anchoring, 100% interception of the signature-layer attacks and verifiable incentive fairness — rather than RL performance optimization. The BC effect on `env_reward` is a positive trend that is **not statistically significant**, and we report it honestly. Note that this is not the only evidence: the incentive was designed to shape **cooperation**, and there the effect *is* significant (whole-run cooperation rate p=0.0022, d=0.985). Note also the bounded scope of the CW-PBFT advantage documented above.
 
@@ -140,14 +140,14 @@ marl-ecdsa-consensus-chain/
 │   └── integration/  # Bridge, SelfishAgent, CooperationDetector, AdaptiveLambda
 ├── visualization/    # Flask Dashboard (attack demo, consensus animation)
 ├── scripts/          # export_dataset.py, benchmark, ablation, one-click launchers
-└── tests/            # 144 test modules (1585 passed / 2 skipped)
+└── tests/            # 144 test modules (1603 passed / 2 skipped)
 ```
 
 ---
 
 ## 🧪 Testing
 
-- **1585 tests passed / 2 skipped / 0 failed** (1587 collected) across 144 test modules: consensus, crypto security (RFC 6979, k-reuse, replay), blockchain, MARL integration, P2P network, dashboard attack API.
+- **1603 tests passed / 2 skipped / 0 failed** (1605 collected) across 144 test modules: consensus, crypto security (RFC 6979, k-reuse, replay), blockchain, MARL integration, P2P network, dashboard attack API.
 - Static checks: `python -m compileall -q blockchain/ marl/ visualization/`.
 
 ---
